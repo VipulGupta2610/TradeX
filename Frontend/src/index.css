@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --surface-page: #f8fafc;
+  --surface-panel: #ffffff;
+  --surface-panel-muted: #f1f5f9;
+  --surface-border: rgba(15, 23, 42, 0.12);
+  --surface-text: #0f172a;
+  --surface-muted: #475569;
+}
+
+.dark {
+  --surface-page: #050505;
+  --surface-panel: #0a0a0a;
+  --surface-panel-muted: #111111;
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --surface-text: #ffffff;
+  --surface-muted: #a1a1aa;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--surface-page);
+}
+
+body {
+  color: var(--surface-text);
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
+html:not(.dark) .themeable-page {
+  background-color: var(--surface-page) !important;
+  color: var(--surface-text) !important;
+}
+
+html:not(.dark) .themeable-page .bg-\[\#050505\],
+html:not(.dark) .themeable-page .bg-\[\#000000\],
+html:not(.dark) .themeable-page .bg-\[\#020202\],
+html:not(.dark) .themeable-page .bg-\[\#0A0A0A\] {
+  background-color: var(--surface-panel) !important;
+}
+
+html:not(.dark) .themeable-page .bg-\[\#111\],
+html:not(.dark) .themeable-page .bg-\[\#0c0c0c\],
+html:not(.dark) .themeable-page .bg-\[\#141414\] {
+  background-color: var(--surface-panel-muted) !important;
+}
+
+html:not(.dark) .themeable-page .text-white,
+html:not(.dark) .themeable-page .text-zinc-100,
+html:not(.dark) .themeable-page .text-zinc-200,
+html:not(.dark) .themeable-page .text-zinc-300,
+html:not(.dark) .themeable-page .text-zinc-400,
+html:not(.dark) .themeable-page .text-zinc-500,
+html:not(.dark) .themeable-page .text-zinc-600,
+html:not(.dark) .themeable-page .text-zinc-700 {
+  color: var(--surface-text) !important;
+}
+
+html:not(.dark) .themeable-page .border-white\/10,
+html:not(.dark) .themeable-page .border-white\/\[0\.05\],
+html:not(.dark) .themeable-page .border-white\/\[0\.08\],
+html:not(.dark) .themeable-page .border-white\/\[0\.10\],
+html:not(.dark) .themeable-page .border-white\/\[0\.15\],
+html:not(.dark) .themeable-page .border-white\/\[0\.20\],
+html:not(.dark) .themeable-page .border-white\/\[0\.04\] {
+  border-color: var(--surface-border) !important;
+}
+
+html:not(.dark) .themeable-page .card-border {
+  background: rgba(255, 255, 255, 0.78) !important;
+  border-color: var(--surface-border) !important;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+html:not(.dark) .themeable-page .grad-text {
+  background: linear-gradient(135deg, #0f172a 30%, rgba(15, 23, 42, 0.48)) !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+}
+
+html:not(.dark) .themeable-page input {
+  color: var(--surface-text);
+}
