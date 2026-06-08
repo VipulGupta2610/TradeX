@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { api } from "../api/axios.js";
+import { io } from "socket.io-client";
 
+const socket = io("http://localhost:2222");
 /* ═══════════════════════════════════════════════════════════════════
    TRADEX PRO — Zerodha Kite / TradingView inspired
    Ultra-premium dark terminal with AI assistant
@@ -8,18 +10,21 @@ import { api } from "../api/axios.js";
 ═══════════════════════════════════════════════════════════════════ */
 
 const SYMBOLS = [
-  { sym:"MEESHO",  exch:"NSE", name:"Meesho Ltd",        price:165.34, chg:+0.09, chgPct:+0.05, vol:"31.002K", oi:null },
-  { sym:"NIFTY50", exch:"NSE", name:"Nifty 50 Index",    price:23416.55,chg:+10.95,chgPct:+0.05,vol:"—",       oi:null },
-  { sym:"SENSEX",  exch:"BSE", name:"BSE Sensex",        price:74360.01,chg:+13.84,chgPct:+0.02,vol:"—",       oi:null },
-  { sym:"RELIANCE",exch:"NSE", name:"Reliance Industries",price:2891.40,chg:+18.60,chgPct:+0.65,vol:"4.2M",    oi:null },
-  { sym:"TCS",     exch:"NSE", name:"Tata Consultancy",  price:3754.80,chg:-22.30,chgPct:-0.59, vol:"1.1M",    oi:null },
-  { sym:"INFY",    exch:"NSE", name:"Infosys Ltd",       price:1812.55,chg:+9.45, chgPct:+0.52, vol:"2.8M",    oi:null },
-  { sym:"HDFCBANK",exch:"NSE", name:"HDFC Bank",         price:1678.90,chg:-5.40, chgPct:-0.32, vol:"5.6M",    oi:null },
-  { sym:"ADANIENT",exch:"NSE", name:"Adani Enterprises", price:2456.30,chg:+34.20,chgPct:+1.41, vol:"890K",    oi:null },
-  { sym:"WIPRO",   exch:"NSE", name:"Wipro Ltd",         price:478.65, chg:+2.15, chgPct:+0.45, vol:"3.2M",    oi:null },
-  { sym:"SBIN",    exch:"NSE", name:"State Bank India",  price:812.40, chg:+6.80, chgPct:+0.84, vol:"7.8M",    oi:null },
-  { sym:"BAJFINANCE",exch:"NSE",name:"Bajaj Finance",    price:7234.50,chg:-45.30,chgPct:-0.62, vol:"420K",    oi:null },
-  { sym:"TATAMOTORS",exch:"NSE",name:"Tata Motors",      price:987.65, chg:+12.40,chgPct:+1.27, vol:"6.1M",    oi:null },
+  // --- CRYPTO (Use these for Twelve Data candles + Binance WebSockets) ---
+  { sym: "BTC/USD", exch: "BINANCE", name: "Bitcoin", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "ETH/USD", exch: "BINANCE", name: "Ethereum", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "SOL/USD", exch: "BINANCE", name: "Solana", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "XRP/USD", exch: "BINANCE", name: "Ripple", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+
+  // --- US STOCKS (Twelve Data Free Tier Support) ---
+  { sym: "AAPL", exch: "NASDAQ", name: "Apple Inc", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "TSLA", exch: "NASDAQ", name: "Tesla Inc", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "MSFT", exch: "NASDAQ", name: "Microsoft", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "GOOGL", exch: "NASDAQ", name: "Alphabet", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "AMZN", exch: "NASDAQ", name: "Amazon", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "NVDA", exch: "NASDAQ", name: "NVIDIA", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "META", exch: "NASDAQ", name: "Meta Platforms", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null },
+  { sym: "NFLX", exch: "NASDAQ", name: "Netflix", price: 0, chg: 0, chgPct: 0, vol: "0", oi: null }
 ];
 
 const TF_DAY   = ["1D","5D","1M","3M","6M","1Y","3Y","5Y"];
@@ -119,42 +124,59 @@ export default function TradingTerminal() {
   const [drawing,    setDrawing]    = useState(false);
   const [drawStart,  setDrawStart]  = useState(null);
   const [candles,    setCandles]    = useState(()=>genCandles(SYMBOLS[0].price));
+useEffect(() => {
+    const initPrices = async () => {
+      const symbols = Object.keys(assetMap);
+      const dataPromises = symbols.map(async (sym) => {
+        try {
+          const res = await api.get(`/markets/quote/${sym}`);
+          return {
+            id: sym,
+            ...assetMap[sym],
+            price: Number(res.data.price).toFixed(2),
+            change: "0.00%",
+            isPositive: true,
+            volume: "-"
+          };
+        } catch (e) {
+          return { id: sym, ...assetMap[sym], price: "0.00", change: "N/A", isPositive: true, volume: "-" };
+        }
+      });
+      const results = await Promise.all(dataPromises);
+      setMarketData(results);
+    };
+    initPrices();
+  }, []);
+
+  // 2. Real-time updates: Socket for Crypto, Interval for Stocks
   useEffect(() => {
+    // Socket Listener (Only updates if data arrives)
+    socket.on("price-update", (data) => {
+      setMarketData(prev => prev.map(item => 
+        item.id === data.symbol 
+          ? { ...item, price: Number(data.price).toFixed(2) } 
+          : item
+      ));
+    });
 
-  const loadCandles = async () => {
+    // Polling Interval (Updates stocks every 60s to stay within API limits)
+    const interval = setInterval(async () => {
+      const stockSymbols = ["AAPL", "TSLA", "MSFT", "RELIANCE", "TCS", "INFY"];
+      for(let sym of stockSymbols) {
+        try {
+          const res = await api.get(`/markets/quote/${sym}`);
+          setMarketData(prev => prev.map(item => 
+             item.id === sym ? { ...item, price: Number(res.data.price).toFixed(2) } : item
+          ));
+        } catch(e) {}
+      }
+    }, 60000);
 
-    try {
-
-      const res = await api.get(
-        "/markets/candles/AAPL"
-      );
-
-      const data = res.data;
-
-      const formatted = data.c.map((close,index)=>({
-
-        open: data.o[index],
-        high: data.h[index],
-        low: data.l[index],
-        close: data.c[index],
-        time: data.t[index] * 1000,
-        volume: data.v[index]
-
-      }));
-
-      setCandles(formatted);
-
-    } catch(error){
-
-      console.log(error);
-
-    }
-
-  };
-
-  loadCandles();
-
-},[]);
+    return () => {
+      socket.off("price-update");
+      clearInterval(interval);
+    };
+  }, []);
   const [live,       setLive]       = useState(SYMBOLS[0].price);
   const [prices,     setPrices]     = useState(()=>Object.fromEntries(SYMBOLS.map(s=>[s.sym,{price:s.price,chg:s.chg,chgPct:s.chgPct}])));
   const [xhair,      setXhair]      = useState(null);

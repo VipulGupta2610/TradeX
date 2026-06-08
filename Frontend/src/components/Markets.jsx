@@ -12,53 +12,23 @@ export default function Markets() {
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
   const [activeFilter, setActiveFilter] = useState('All');
 
+// Inside your Markets.jsx
   const assetMap = {
-    "BINANCE:BTCUSDT": {
-      name: "Bitcoin",
-      ticker: "BTC",
-      type: "Crypto"
-    },
-    "BINANCE:ETHUSDT": {
-  name:"Ethereum",
-  ticker:"ETH",
-  type:"Crypto"
-},
-
-"BINANCE:SOLUSDT": {
-  name:"Solana",
-  ticker:"SOL",
-  type:"Crypto"
-},
-
-"BINANCE:XRPUSDT": {
-  name:"Ripple",
-  ticker:"XRP",
-  type:"Crypto"
-},
-
-    "AAPL": {
-      name: "Apple Inc.",
-      ticker: "AAPL",
-      type: "Stocks"
-    },
-
-    "TSLA": {
-      name: "Tesla Inc.",
-      ticker: "TSLA",
-      type: "Stocks"
-    },
-
-    "MSFT": {
-      name: "Microsoft",
-      ticker: "MSFT",
-      type: "Stocks"
-    },
-
-    "GOOGL": {
-      name: "Alphabet",
-      ticker: "GOOGL",
-      type: "Stocks"
-    }
+    // Cryptos
+    "BINANCE:BTCUSDT": { name: "Bitcoin", ticker: "BTC", type: "Crypto" },
+    "BINANCE:ETHUSDT": { name: "Ethereum", ticker: "ETH", type: "Crypto" },
+    "BINANCE:SOLUSDT": { name: "Solana", ticker: "SOL", type: "Crypto" },
+    "BINANCE:XRPUSDT": { name: "Ripple", ticker: "XRP", type: "Crypto" },
+    
+    // Stocks
+    "AAPL": { name: "Apple Inc.", ticker: "AAPL", type: "Stocks" },
+    "TSLA": { name: "Tesla Inc.", ticker: "TSLA", type: "Stocks" },
+    "MSFT": { name: "Microsoft", ticker: "MSFT", type: "Stocks" },
+    "GOOGL": { name: "Alphabet", ticker: "GOOGL", type: "Stocks" },
+    "RELIANCE": { name: "Reliance Industries", ticker: "RELIANCE", type: "Stocks" },
+    "TCS": { name: "Tata Consultancy", ticker: "TCS", type: "Stocks" },
+    "INFY": { name: "Infosys Ltd", ticker: "INFY", type: "Stocks" },
+    "HDFCBANK": { name: "HDFC Bank", ticker: "HDFCBANK", type: "Stocks" }
   };
 
   useEffect(() => {

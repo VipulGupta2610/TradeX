@@ -10,18 +10,12 @@ export function startMarketData(io) {
     socket.on("open", () => {
         console.log("✅ Connected to Finnhub");
 
-        const symbols = [
-            "BINANCE:BTCUSDT",
-            "BINANCE:ETHUSDT",
-            "BINANCE:SOLUSDT",
-            "BINANCE:XRPUSDT",
-            "AAPL",
-            "TSLA",
-            "MSFT",
-            "GOOGL"
-        ];
+        // Use a clear separation
+        const cryptoSymbols = ["BINANCE:BTCUSDT", "BINANCE:ETHUSDT", "BINANCE:SOLUSDT", "BINANCE:XRPUSDT"];
+        const stockSymbols = ["AAPL", "TSLA", "MSFT", "GOOGL", "RELIANCE", "TCS", "INFY", "HDFCBANK"];
 
-        symbols.forEach((symbol) => {
+        // Subscribe to everything
+        [...cryptoSymbols, ...stockSymbols].forEach((symbol) => {
             socket.send(
                 JSON.stringify({
                     type: "subscribe",
@@ -34,27 +28,18 @@ export function startMarketData(io) {
     socket.on("message", (data) => {
         const parsed = JSON.parse(data.toString());
 
-        if (!parsed.data) return;
-
-        parsed.data.forEach((trade) => {
-
-            marketPrices[trade.s] = trade.p;
-
-            io.emit("price-update", {
-                symbol: trade.s,
-                price: trade.p
+        // LOG THIS to see if stocks are actually arriving
+        if (parsed.type === "trade") {
+            // console.log("Received data:", parsed.data);
+            
+            parsed.data.forEach((trade) => {
+                marketPrices[trade.s] = trade.p;
+                io.emit("price-update", {
+                    symbol: trade.s,
+                    price: trade.p
+                });
             });
-
-        });
-
-
+        }
     });
-
-    socket.on("error", (err) => {
-        console.log(err);
-    });
-
-    socket.on("close", () => {
-        console.log("Finnhub disconnected");
-    });
+    // ... rest of your code
 }

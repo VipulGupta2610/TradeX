@@ -1,34 +1,43 @@
 import axios from "axios";
 
-export const getCandles = async (req,res)=>{
+export const getCandles = async (req, res) => {
+  try {
+    let symbol = req.params.symbol;
+    
+    console.log("Original Symbol requested:", symbol);
 
- const symbol = req.params.symbol;
-
- const now = Math.floor(Date.now()/1000);
-
- const weekAgo = now - (7 * 24 * 60 * 60);
-
- try{
-
-   const response = await axios.get(
-    "https://finnhub.io/api/v1/stock/candle",
-    {
-      params:{
-        symbol,
-        resolution:"5",
-        from:weekAgo,
-        to:now,
-        token:process.env.FINNHUB_API_KEY
-      }
+    // 🌟 THE FIX: TwelveData prefers the generic BTC/USD pair
+    if (symbol === "BTCUSDT") {
+      symbol = "BTC/USD"; 
     }
-   );
 
-   res.json(response.data);
+    console.log("Formatted Symbol sent to Twelve Data:", symbol);
 
- }catch(error){
+    const response = await axios.get(
+      "https://api.twelvedata.com/time_series",
+      {
+        params: {
+          symbol: symbol,
+          interval: "1min", 
+          outputsize: 100,
+          apikey: process.env.TWELVE_DATA_KEY
+        }
+      }
+    );
+console.log(response)
+    // Twelve Data sometimes returns 200 OK but includes an error message in the JSON
+    if (response.data.status === "error") {
+       return res.status(400).json({ error: response.data.message });
+    }
 
-   console.log(error);
+    res.json(response.data);
 
- }
+  } catch (error) {
+    console.log("TWELVE DATA ERROR");
+    console.log(error.response?.data || error.message);
 
+    res.status(500).json({
+      error: error.response?.data || error.message
+    });
+  }
 }
