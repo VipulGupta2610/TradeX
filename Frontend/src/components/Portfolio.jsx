@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useTradingAccount } from '../hooks/useTradingAccount';
 import { adjustVirtualFunds } from '../api/tradingApi';
+import Sidebar from "../assets/Sidebar"
 
 const portfolioMetrics = {
   totalBalance: "$142,850.00",
@@ -85,6 +86,7 @@ export default function PortfolioUltra() {
         <div className="absolute inset-0 opacity-10 dark:opacity-20 bg-grid" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       </div>
 
+
       {/* --- TOP NAVIGATION --- */}
       <nav className="relative z-50 px-8 py-6 flex justify-between items-center border-b border-gray-300 dark:border-gray-700 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 rounded-xl shadow-md">
         <div className="flex items-center gap-3">
@@ -106,6 +108,7 @@ export default function PortfolioUltra() {
           </Link>
         </div>
       </nav>
+            <Sidebar/>
 
       {/* --- MAIN CONTENT --- */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 py-12">

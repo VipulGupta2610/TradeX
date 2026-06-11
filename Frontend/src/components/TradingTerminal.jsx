@@ -589,6 +589,7 @@ export default function TradingTerminal() {
 
   const selector = useSelector(state => state?.auth?.user)
   const userId = selector?._id;
+  // console.log(selector)
   const [accountBalance, setAccountBalance] = useState(selector?.virtualBalance ?? 0);
   // console.log(selector)
 
@@ -1514,7 +1515,7 @@ Provide concise, actionable analysis. Use bullet points and bold for key levels.
 
 
         {/* Action buttons */}
-   <Link to={`/Dashboard/${selector?.auth?.user?._id}`}>
+   <Link to={`/Dashboard/${userId}`}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={() => setShowRiskCalc(true)} style={{ padding: "4px 10px", borderRadius: 5, fontSize: 10, fontWeight: 600, border: "1px solid rgba(99,130,255,0.25)", color: "#7da8ff", background: "rgba(41,98,255,0.08)" }}>⚖ Risk Calc</button>
           <button onClick={() => setShowAlertDialog(true)} style={{ padding: "4px 10px", borderRadius: 5, fontSize: 10, fontWeight: 600, border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b", background: "rgba(245,158,11,0.06)" }}>⊕ Alert</button>
