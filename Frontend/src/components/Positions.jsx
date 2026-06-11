@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
 
 // --- Mock Derivatives Data ---
 const positions = [
@@ -21,6 +24,31 @@ const marginMetrics = {
 export default function Positions() {
   const [isDark, setIsDark] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [search, setSearch] = useState('');
+  const user = useSelector(state => state.auth.user);
+  const { positions: accountPositions, metrics, closePosition } = useTradingAccount(user?._id);
+  const positions = accountPositions.map(position => ({
+    id: position.id || position.sym,
+    market: position.sym,
+    type: position.type,
+    side: 'LONG',
+    leverage: '1x',
+    size: `${position.qty} units`,
+    notional: `₹${position.value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    entry: `₹${position.avg.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    mark: `₹${position.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    liqPrice: 'N/A',
+    pnl: `${position.pnl >= 0 ? '+' : '-'}₹${Math.abs(position.pnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    pnlPct: `${position.pnlPct >= 0 ? '+' : ''}${position.pnlPct.toFixed(2)}%`,
+    isProfitable: position.pnl >= 0,
+    source: position
+  }));
+  const marginMetrics = {
+    totalEquity: `₹${metrics.totalEquity.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    unrealizedPnL: `${metrics.unrealizedPnl >= 0 ? '+' : '-'}₹${Math.abs(metrics.unrealizedPnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    availableMargin: `₹${(metrics.totalEquity - metrics.invested).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    maintenanceMargin: `₹${(metrics.invested * 0.1).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+  };
 
   // Toggle Tailwind Dark Mode
   useEffect(() => {
@@ -34,6 +62,7 @@ export default function Positions() {
   const filteredPositions = activeFilter === 'All' 
     ? positions 
     : positions.filter(pos => pos.type === activeFilter);
+  const searchedPositions = filteredPositions.filter(pos => pos.market.toLowerCase().includes(search.toLowerCase()));
 
   // Framer Motion Variants
   const container = {
@@ -73,9 +102,9 @@ export default function Positions() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <a href="/Dashboard" className="px-5 py-2.5 rounded-lg bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:opacity-90 transition-opacity">
+          <Link to={user?._id ? `/Dashboard/${user._id}` : '/Login'} className="px-5 py-2.5 rounded-lg bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:opacity-90 transition-opacity">
             Dashboard
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -93,7 +122,7 @@ export default function Positions() {
             </div>
             
             <div className="flex gap-2">
-              <button className="px-6 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl text-sm font-bold hover:bg-rose-500/20 transition-colors">
+              <button onClick={async () => { for (const position of accountPositions) await closePosition(position); }} className="px-6 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl text-sm font-bold hover:bg-rose-500/20 transition-colors">
                 Close All
               </button>
               <button className="px-6 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
@@ -121,7 +150,7 @@ export default function Positions() {
                 </div>
                 <div className="relative w-full sm:w-64">
                   <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  <input type="text" placeholder="Filter positions..." className="w-full bg-black/[0.02] dark:bg-white/[0.02] border border-black/10 dark:border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors" />
+                  <input value={search} onChange={event => setSearch(event.target.value)} type="text" placeholder="Filter positions..." className="w-full bg-black/[0.02] dark:bg-white/[0.02] border border-black/10 dark:border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors" />
                 </div>
               </div>
 
@@ -140,7 +169,7 @@ export default function Positions() {
                   </thead>
                   <tbody className="text-sm">
                     <AnimatePresence mode="popLayout">
-                      {filteredPositions.map((pos) => (
+                      {searchedPositions.map((pos) => (
                         <motion.tr 
                           key={pos.id}
                           layout
@@ -187,7 +216,7 @@ export default function Positions() {
 
                           {/* Actions */}
                           <td className="py-5 px-6 text-center">
-                            <button className="px-4 py-1.5 rounded-lg border border-black/10 dark:border-white/10 text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                            <button onClick={() => closePosition(pos.source)} className="px-4 py-1.5 rounded-lg border border-black/10 dark:border-white/10 text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                               Close
                             </button>
                           </td>

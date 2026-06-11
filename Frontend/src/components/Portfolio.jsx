@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { useTradingAccount } from '../hooks/useTradingAccount';
+import { adjustVirtualFunds } from '../api/tradingApi';
 
 const portfolioMetrics = {
   totalBalance: "$142,850.00",
@@ -23,6 +27,35 @@ const holdings = [
 export default function PortfolioUltra() {
   const [isDark, setIsDark] = useState(true);
   const [timeframe, setTimeframe] = useState('1M');
+  const user = useSelector(state => state.auth.user);
+  const { balance, positions, metrics, refresh } = useTradingAccount(user?._id);
+  const changeFunds = async direction => {
+    const raw = window.prompt(`${direction === 1 ? 'Deposit' : 'Withdraw'} virtual amount`);
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    await adjustVirtualFunds(user._id, amount * direction);
+    await refresh();
+  };
+  const holdings = positions.map(position => ({
+    id: position.id || position.sym,
+    ticker: position.sym,
+    name: position.name || position.sym,
+    type: position.type,
+    qty: position.qty,
+    avgPrice: `₹${position.avg.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    currentPrice: `₹${position.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    totalValue: `₹${position.value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    pnl: `${position.pnl >= 0 ? '+' : '-'}₹${Math.abs(position.pnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    pnlPercent: `${position.pnlPct >= 0 ? '+' : ''}${position.pnlPct.toFixed(2)}%`,
+    isUp: position.pnl >= 0,
+    sparkline: position.pnl >= 0 ? "M0,40 Q20,35 40,28 T70,20 T100,8" : "M0,10 Q20,18 40,25 T70,38 T100,45"
+  }));
+  const portfolioMetrics = {
+    totalBalance: `₹${metrics.totalEquity.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    cash: `₹${balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    dailyPnL: `${metrics.unrealizedPnl >= 0 ? '+' : '-'}₹${Math.abs(metrics.unrealizedPnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+    totalPnLPercent: `${metrics.invested ? (metrics.unrealizedPnl / metrics.invested * 100).toFixed(2) : '0.00'}%`
+  };
 
   useEffect(() => {
     if (isDark) {
@@ -68,9 +101,9 @@ export default function PortfolioUltra() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <button className="px-6 py-2 rounded-full bg-gray-800 text-white font-semibold shadow-md hover:scale-105 transition-transform">
+          <Link to="/TradingTerminal" className="px-6 py-2 rounded-full bg-gray-800 text-white font-semibold shadow-md hover:scale-105 transition-transform">
             Execution Terminal
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -168,8 +201,8 @@ export default function PortfolioUltra() {
                 <p className="text-xs font-bold uppercase mb-2 text-gray-500">Available Purchasing Power</p>
                 <h3 className="text-4xl font-extrabold">{portfolioMetrics.cash}</h3>
                 <div className="mt-8 flex gap-4">
-                  <button className="flex-1 py-3 rounded-xl bg-gray-900 text-white font-semibold shadow-md hover:scale-105 transition-transform">Deposit</button>
-                  <button className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-600 font-semibold hover:bg-gray-100 transition">Withdraw</button>
+                  <button onClick={() => changeFunds(1)} className="flex-1 py-3 rounded-xl bg-gray-900 text-white font-semibold shadow-md hover:scale-105 transition-transform">Deposit</button>
+                  <button onClick={() => changeFunds(-1)} className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-600 font-semibold hover:bg-gray-100 transition">Withdraw</button>
                 </div>
               </div>
 

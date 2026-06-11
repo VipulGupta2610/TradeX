@@ -1,5 +1,8 @@
 import user from "../schemas/user.schema.js"
 import bcryptjs from "bcryptjs"
+import orders from "../schemas/orders.schema.js";
+import positions from "../schemas/positions.schema.js";
+import watchlist from "../schemas/watchlist.schema.js";
 
 export const signup = async (req, res) => {
     try {
@@ -55,3 +58,78 @@ export const login = async (req, res) => {
         return res.status(500).json({ message: "Error at loggin in ", error })
     }
 }
+
+export const updateProfile = async (req, res) => {
+    try {
+        const { name, plan } = req.body;
+        const updates = {};
+        if (typeof name === "string" && name.trim()) updates.name = name.trim();
+        if (["free", "pro", "enterprise"].includes(plan)) updates.plan = plan;
+
+        const updated = await user.findByIdAndUpdate(
+            req.params.userid,
+            updates,
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!updated) return res.status(404).json({ message: "User not found" });
+        return res.status(200).json({ message: "Profile updated", user: updated });
+    } catch (error) {
+        return res.status(500).json({ message: "Unable to update profile" });
+    }
+};
+
+export const resetPaperAccount = async (req, res) => {
+    try {
+        const userid = req.params.userid;
+        await Promise.all([
+            orders.deleteMany({ userid }),
+            positions.deleteMany({ userid }),
+            user.findByIdAndUpdate(userid, {
+                virtualBalance: 100000,
+                totalPortfolioValue: 100000
+            })
+        ]);
+        return res.status(200).json({ message: "Paper account reset", balance: 100000 });
+    } catch (error) {
+        return res.status(500).json({ message: "Unable to reset account" });
+    }
+};
+
+export const adjustVirtualFunds = async (req, res) => {
+    try {
+        const amount = Number(req.body.amount);
+        if (!Number.isFinite(amount) || amount === 0) {
+            return res.status(400).json({ message: "Enter a valid amount" });
+        }
+
+        const query = amount < 0
+            ? { _id: req.params.userid, virtualBalance: { $gte: Math.abs(amount) } }
+            : { _id: req.params.userid };
+        const account = await user.findOneAndUpdate(
+            query,
+            { $inc: { virtualBalance: amount, totalPortfolioValue: amount } },
+            { new: true }
+        ).select("-password");
+
+        if (!account) return res.status(400).json({ message: "Insufficient virtual cash" });
+        return res.status(200).json({ message: "Virtual funds updated", user: account });
+    } catch (error) {
+        return res.status(500).json({ message: "Unable to update virtual funds" });
+    }
+};
+
+export const deleteAccount = async (req, res) => {
+    try {
+        const userid = req.params.userid;
+        await Promise.all([
+            orders.deleteMany({ userid }),
+            positions.deleteMany({ userid }),
+            watchlist.deleteMany({ userid }),
+            user.findByIdAndDelete(userid)
+        ]);
+        return res.status(200).json({ message: "Account deleted" });
+    } catch (error) {
+        return res.status(500).json({ message: "Unable to delete account" });
+    }
+};

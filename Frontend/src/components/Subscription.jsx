@@ -1,8 +1,30 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { updateProfile } from '../api/tradingApi';
+import { loginuser } from '../redux/authSlice';
 
 export default function Subscription() {
   const [billing, setBilling] = useState('Annually');
+  const [message, setMessage] = useState('');
+  const user = useSelector(state => state.auth.user);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const selectPlan = async tier => {
+    if (!user?._id) {
+      navigate('/Login');
+      return;
+    }
+    const plan = tier.toLowerCase() === 'hobby' ? 'free' : tier.toLowerCase();
+    if (plan === 'enterprise') {
+      window.location.href = `mailto:sales@tradex.io?subject=TradEx Enterprise Plan`;
+      return;
+    }
+    const response = await updateProfile(user._id, { plan });
+    dispatch(loginuser(response.data.user));
+    setMessage(`${tier} plan activated.`);
+  };
   
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const item = { hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } };
@@ -51,7 +73,7 @@ export default function Subscription() {
                   <span className="text-5xl font-black font-mono">{plan.price}</span>
                   {plan.price !== 'Free' && plan.price !== 'Custom' && <span className="text-zinc-500 font-medium">/mo</span>}
                 </div>
-                <button className={`w-full py-4 rounded-xl font-bold text-sm mb-8 transition-colors ${plan.popular ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-white/10 hover:bg-white/20'}`}>
+                <button onClick={() => selectPlan(plan.tier)} className={`w-full py-4 rounded-xl font-bold text-sm mb-8 transition-colors ${plan.popular ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-white/10 hover:bg-white/20'}`}>
                   {plan.price === 'Custom' ? 'Contact Sales' : 'Get Started'}
                 </button>
                 <div className="space-y-4">
@@ -66,6 +88,7 @@ export default function Subscription() {
               </motion.div>
             ))}
           </div>
+          {message && <p className="mt-8 text-emerald-400 font-bold">{message}</p>}
         </motion.div>
       </main>
     </div>

@@ -17,7 +17,7 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
-    const msg = err.response?.data?.error || err.message || "Network error";
+    const msg = err.response?.data?.message || err.response?.data?.error || err.message || "Network error";
     return Promise.reject(new Error(msg));
   }
 );

@@ -65,8 +65,50 @@ const generateHeatmap = () => {
 
 export default function TradeJournal() {
   const [isDark, setIsDark] = useState(true);
-  const [selectedEntry, setSelectedEntry] = useState(entries[0]);
+  const [journalEntries, setJournalEntries] = useState(() => {
+    const stored = localStorage.getItem('tradex_journal');
+    return stored ? JSON.parse(stored) : entries;
+  });
+  const [selectedEntry, setSelectedEntry] = useState(journalEntries[0]);
   const heatmapData = React.useMemo(() => generateHeatmap(), []);
+  const saveEntries = next => {
+    setJournalEntries(next);
+    localStorage.setItem('tradex_journal', JSON.stringify(next));
+  };
+  const createEntry = () => {
+    const market = window.prompt('Market symbol');
+    if (!market) return;
+    const notes = window.prompt('Trade notes') || '';
+    const entry = {
+      id: `JRN-${Date.now().toString().slice(-6)}`,
+      date: new Date().toLocaleDateString(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      market: market.toUpperCase(),
+      direction: 'LONG',
+      pnl: '₹0.00',
+      isWin: true,
+      setup: 'New Setup',
+      tags: ['New'],
+      notes,
+      mistakes: 'Review after trade.'
+    };
+    saveEntries([entry, ...journalEntries]);
+    setSelectedEntry(entry);
+  };
+  const editEntry = () => {
+    const notes = window.prompt('Update notes', selectedEntry.notes);
+    if (notes == null) return;
+    const updated = { ...selectedEntry, notes };
+    saveEntries(journalEntries.map(entry => entry.id === updated.id ? updated : entry));
+    setSelectedEntry(updated);
+  };
+  const addTag = () => {
+    const tag = window.prompt('Tag name');
+    if (!tag) return;
+    const updated = { ...selectedEntry, tags: [...new Set([...selectedEntry.tags, tag])] };
+    saveEntries(journalEntries.map(entry => entry.id === updated.id ? updated : entry));
+    setSelectedEntry(updated);
+  };
 
   useEffect(() => {
     if (isDark) {
@@ -129,7 +171,7 @@ export default function TradeJournal() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <button className="px-6 py-2.5 rounded-full bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition-colors shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+          <button onClick={createEntry} className="px-6 py-2.5 rounded-full bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition-colors shadow-[0_0_20px_rgba(16,185,129,0.2)]">
             + New Entry
           </button>
         </div>
@@ -206,7 +248,7 @@ export default function TradeJournal() {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-hide">
-                  {entries.map(entry => (
+                  {journalEntries.map(entry => (
                     <div 
                       key={entry.id}
                       onClick={() => setSelectedEntry(entry)}
@@ -276,7 +318,7 @@ export default function TradeJournal() {
                       {tag}
                     </span>
                   ))}
-                  <button className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-zinc-500 text-xs font-bold hover:text-white hover:border-white/50 transition-colors">
+                  <button onClick={addTag} className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-zinc-500 text-xs font-bold hover:text-white hover:border-white/50 transition-colors">
                     + Add Tag
                   </button>
                 </div>
@@ -319,10 +361,10 @@ export default function TradeJournal() {
               <div className="p-6 border-t border-white/[0.05] bg-black/[0.05] flex justify-between items-center z-10 relative">
                 <p className="text-xs text-zinc-500">Last edited: Today, 15:42</p>
                 <div className="flex gap-3">
-                  <button className="px-6 py-2.5 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/5 transition-colors">
+                  <button onClick={() => navigator.clipboard.writeText(`${selectedEntry.market}\n${selectedEntry.notes}`)} className="px-6 py-2.5 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/5 transition-colors">
                     Share
                   </button>
-                  <button className="px-6 py-2.5 rounded-xl bg-white text-black text-sm font-bold hover:bg-zinc-200 transition-colors shadow-lg">
+                  <button onClick={editEntry} className="px-6 py-2.5 rounded-xl bg-white text-black text-sm font-bold hover:bg-zinc-200 transition-colors shadow-lg">
                     Edit Journal
                   </button>
                 </div>

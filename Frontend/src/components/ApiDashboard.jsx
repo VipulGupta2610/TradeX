@@ -2,7 +2,20 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 export default function ApiDashboard() {
-  const [activeKey, setActiveKey] = useState('pk_live_9x8a7...');
+  const [keys, setKeys] = useState(() => {
+    const stored = localStorage.getItem('tradex_api_keys');
+    return stored ? JSON.parse(stored) : [
+      { name: 'Production Default', key: 'pk_live_9x8a7', created: new Date().toLocaleDateString(), lastUsed: 'Never' }
+    ];
+  });
+  const saveKeys = next => {
+    setKeys(next);
+    localStorage.setItem('tradex_api_keys', JSON.stringify(next));
+  };
+  const generateKey = () => {
+    const value = `pk_live_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`;
+    saveKeys([...keys, { name: `Key ${keys.length + 1}`, key: value, created: new Date().toLocaleDateString(), lastUsed: 'Never' }]);
+  };
   
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -29,8 +42,8 @@ export default function ApiDashboard() {
               <h1 className="text-5xl md:text-6xl font-black tracking-tighter">API & Webhooks.</h1>
             </motion.div>
             <motion.div variants={item} className="flex gap-4">
-              <button className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-bold hover:bg-white/10 transition-colors">Read Docs</button>
-              <button className="px-6 py-3 rounded-xl bg-cyan-500 text-black text-sm font-bold hover:bg-cyan-400 transition-colors shadow-[0_0_20px_rgba(34,211,238,0.2)]">+ Generate Key</button>
+              <button onClick={() => window.open('https://twelvedata.com/docs', '_blank', 'noopener,noreferrer')} className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-bold hover:bg-white/10 transition-colors">Read Docs</button>
+              <button onClick={generateKey} className="px-6 py-3 rounded-xl bg-cyan-500 text-black text-sm font-bold hover:bg-cyan-400 transition-colors shadow-[0_0_20px_rgba(34,211,238,0.2)]">+ Generate Key</button>
             </motion.div>
           </div>
 
@@ -39,10 +52,7 @@ export default function ApiDashboard() {
             <motion.div variants={item} className="xl:col-span-2 bg-[#0A0A0A]/80 backdrop-blur-3xl border border-white/[0.08] rounded-[40px] p-8 shadow-2xl">
               <h3 className="text-xl font-bold mb-6">Authentication Keys</h3>
               <div className="space-y-4">
-                {[
-                  { name: 'Production Default', key: 'pk_live_9x8a7...', created: 'Oct 12, 2026', lastUsed: 'Just now' },
-                  { name: 'Staging Environment', key: 'pk_test_4m2v1...', created: 'Oct 10, 2026', lastUsed: '2 hours ago' }
-                ].map((k, i) => (
+                {keys.map((k, i) => (
                   <div key={i} className="p-5 rounded-2xl bg-black/40 border border-white/5 flex justify-between items-center group hover:border-cyan-500/30 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
@@ -50,12 +60,12 @@ export default function ApiDashboard() {
                       </div>
                       <div>
                         <p className="font-bold">{k.name}</p>
-                        <p className="text-xs font-mono text-zinc-500 mt-1">{k.key} <span className="ml-2 text-[10px] bg-white/10 px-2 py-0.5 rounded cursor-pointer hover:text-white">Copy</span></p>
+                        <p className="text-xs font-mono text-zinc-500 mt-1">{k.key.slice(0, 12)}... <button onClick={() => navigator.clipboard.writeText(k.key)} className="ml-2 text-[10px] bg-white/10 px-2 py-0.5 rounded cursor-pointer hover:text-white">Copy</button></p>
                       </div>
                     </div>
                     <div className="text-right hidden sm:block">
                       <p className="text-xs text-zinc-500 mb-1">Last Used: {k.lastUsed}</p>
-                      <button className="text-xs font-bold text-rose-500 hover:text-rose-400">Revoke</button>
+                      <button onClick={() => saveKeys(keys.filter((_, index) => index !== i))} className="text-xs font-bold text-rose-500 hover:text-rose-400">Revoke</button>
                     </div>
                   </div>
                 ))}

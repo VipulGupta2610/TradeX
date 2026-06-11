@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { useTradingAccount } from '../hooks/useTradingAccount';
 
 // --- Mock AI Data ---
 const initialMessages = [
@@ -16,9 +18,18 @@ const cognitiveMetrics = [
 
 export default function AICoach() {
   const [isDark, setIsDark] = useState(true);
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState(() => {
+    const stored = localStorage.getItem('tradex_ai_messages');
+    return stored ? JSON.parse(stored) : initialMessages;
+  });
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const user = useSelector(state => state.auth.user);
+  const { positions, orders, metrics } = useTradingAccount(user?._id);
+
+  useEffect(() => {
+    localStorage.setItem('tradex_ai_messages', JSON.stringify(messages));
+  }, [messages]);
 
   useEffect(() => {
     if (isDark) {
@@ -37,16 +48,15 @@ export default function AICoach() {
     setInputValue('');
     setIsTyping(true);
 
-    // Mock AI Response
     setTimeout(() => {
       setIsTyping(false);
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,
         sender: 'ai',
-        text: 'Analyzing your current portfolio state... Processing real-time market volatility. Stay disciplined.',
+        text: `Your live paper account has ${positions.length} open position${positions.length === 1 ? '' : 's'}, ${orders.filter(order => order.status === 'OPEN').length} pending order${orders.filter(order => order.status === 'OPEN').length === 1 ? '' : 's'}, and ${metrics.unrealizedPnl >= 0 ? 'an unrealized gain' : 'an unrealized loss'} of ₹${Math.abs(metrics.unrealizedPnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}. Keep position size aligned with your available cash of ₹${metrics.totalEquity.toLocaleString('en-IN', { maximumFractionDigits: 2 })}.`,
         time: 'Just now'
       }]);
-    }, 2000);
+    }, 800);
   };
 
   // Framer Motion Variants

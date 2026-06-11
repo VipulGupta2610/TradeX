@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 export default function LearningCenter() {
+  const [activeTrack, setActiveTrack] = useState('All Tracks');
+  const [progress, setProgress] = useState(() => Number(localStorage.getItem('tradex_course_progress') || 65));
+  const resumeCourse = () => {
+    const next = Math.min(progress + 5, 100);
+    setProgress(next);
+    localStorage.setItem('tradex_course_progress', String(next));
+  };
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
@@ -24,8 +32,8 @@ export default function LearningCenter() {
               <h1 className="text-5xl md:text-6xl font-black tracking-tighter">Master the Edge.</h1>
             </motion.div>
             <motion.div variants={item} className="flex gap-3">
-              {['All Tracks', 'Algorithmic Trading', 'Market Structure', 'API Docs'].map((tab, i) => (
-                <button key={tab} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${i === 0 ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'}`}>{tab}</button>
+              {['All Tracks', 'Algorithmic Trading', 'Market Structure', 'API Docs'].map(tab => (
+                <button key={tab} onClick={() => setActiveTrack(tab)} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTrack === tab ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'}`}>{tab}</button>
               ))}
             </motion.div>
           </div>
@@ -57,10 +65,11 @@ export default function LearningCenter() {
                 <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Current Module</p>
                 <h4 className="font-bold text-lg mb-4">Building a REST API Scanner</h4>
                 <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden mb-2">
-                  <div className="w-[65%] h-full bg-indigo-500 rounded-full" />
+                  <div style={{ width: `${progress}%` }} className="h-full bg-indigo-500 rounded-full" />
                 </div>
-                <p className="text-xs font-mono text-zinc-400 text-right">65% Completed</p>
-                <button className="w-full mt-8 py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-colors">Resume Course</button>
+                <p className="text-xs font-mono text-zinc-400 text-right">{progress}% Completed</p>
+                <button onClick={resumeCourse} className="w-full mt-8 py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-colors">{progress >= 100 ? 'Course Complete' : 'Resume Course'}</button>
+                <Link to="/TradingTerminal" className="block text-center mt-3 text-xs text-indigo-400">Practice in terminal</Link>
               </div>
             </motion.div>
           </div>

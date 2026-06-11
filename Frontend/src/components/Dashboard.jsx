@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
 
 // --- Mock Data ---
 const recentActivity = [
@@ -22,6 +23,25 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('Overview');
 
 const selector = useSelector(state=>state.auth.user)
+  const { orders, watchlist: savedWatchlist, quotes, metrics } = useTradingAccount(selector?._id);
+  const recentActivity = orders.slice(0, 4).map(order => ({
+    id: order.id,
+    type: order.side === 'BUY' ? 'Buy' : 'Sell',
+    asset: order.sym,
+    pair: order.sym,
+    amount: order.qty,
+    price: `₹${Number(order.price || 0).toLocaleString('en-IN')}`,
+    status: order.status === 'COMPLETE' ? 'Filled' : order.status === 'OPEN' ? 'Pending' : 'Canceled'
+  }));
+  const marketWatch = savedWatchlist.slice(0, 3).map(item => {
+    const quote = quotes[item.symbol] || {};
+    return {
+      ticker: item.symbol,
+      price: `₹${Number(quote.price || 0).toLocaleString('en-IN')}`,
+      change: `${Number(quote.changePct || 0) >= 0 ? '+' : ''}${Number(quote.changePct || 0).toFixed(2)}%`,
+      up: Number(quote.changePct || 0) >= 0
+    };
+  });
 
   // Toggle Tailwind Dark Mode
   useEffect(() => {
@@ -58,10 +78,14 @@ const selector = useSelector(state=>state.auth.user)
 
           <div className="p-4 space-y-1 mt-4">
             <p className="px-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Terminal</p>
-            {['Overview', 'Portfolio', 'Analytics', 'WatchList'].map((tab) => (
-             <Link to={`/${tab}/${selector._id}`}>
+            {[
+              ['Overview', `/Dashboard/${selector?._id}`],
+              ['Portfolio', `/Portfolio/${selector?._id}`],
+              ['Analytics', `/Analytics/${selector?._id}`],
+              ['WatchList', `/Watchlist/${selector?._id}`]
+            ].map(([tab, path]) => (
+             <Link key={tab} to={path}>
               <button
-                key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`w-full flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   activeTab === tab 
@@ -94,8 +118,8 @@ const selector = useSelector(state=>state.auth.user)
               VG
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate text-black dark:text-white">Vipul Gupta</p>
-              <p className="text-[10px] text-zinc-500 font-mono truncate">Pro Tier</p>
+              <p className="text-sm font-bold truncate text-black dark:text-white">{selector?.name || 'Trader'}</p>
+              <p className="text-[10px] text-zinc-500 font-mono truncate">{selector?.plan || 'free'} Tier</p>
             </div>
             <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
           </div>
@@ -140,10 +164,10 @@ const selector = useSelector(state=>state.auth.user)
                 
                 <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-2">Total Balance</p>
                 <div className="flex items-end gap-4 mb-8">
-                  <h2 className="text-5xl font-black tracking-tighter">$124,532.00</h2>
+                  <h2 className="text-5xl font-black tracking-tighter">₹{metrics.totalEquity.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</h2>
                   <div className="flex items-center gap-1 text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-lg text-sm font-bold mb-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                    +2.4% (24h)
+                    {metrics.unrealizedPnl >= 0 ? '+' : ''}₹{metrics.unrealizedPnl.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </div>
                 </div>
 
@@ -174,8 +198,8 @@ const selector = useSelector(state=>state.auth.user)
                 </div>
                 
                 <div className="my-auto">
-                  <p className="text-4xl font-black tracking-tight mb-1">1.2M <span className="text-xl text-zinc-500 font-medium">/ 2M</span></p>
-                  <p className="text-xs text-zinc-500 font-mono">Requests this month</p>
+                  <p className="text-4xl font-black tracking-tight mb-1">{orders.length} <span className="text-xl text-zinc-500 font-medium">orders</span></p>
+                  <p className="text-xs text-zinc-500 font-mono">{metrics.openOrders} currently open</p>
                   
                   {/* Progress Bar */}
                   <div className="w-full h-2 bg-black/5 dark:bg-white/5 rounded-full mt-6 overflow-hidden">
@@ -216,7 +240,7 @@ const selector = useSelector(state=>state.auth.user)
                       </tr>
                     </thead>
                     <tbody className="text-sm">
-                      {recentActivity.map((tx, i) => (
+                  {recentActivity.map((tx) => (
                         <tr key={tx.id} className="border-b border-black/5 dark:border-white/5 last:border-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
                           <td className="py-4">
                             <div className="flex items-center gap-3">
@@ -248,7 +272,7 @@ const selector = useSelector(state=>state.auth.user)
                 <h3 className="font-bold text-lg mb-6">Market Watch</h3>
                 
                 <div className="space-y-4 mb-auto">
-                  {watchlist.map((item, i) => (
+                  {marketWatch.map((item, i) => (
                     <div key={i} className="flex justify-between items-center p-3 rounded-xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] hover:border-black/10 dark:hover:border-white/10 transition-colors cursor-pointer">
                       <span className="font-bold font-mono text-sm">{item.ticker}</span>
                       <div className="text-right">
@@ -260,9 +284,9 @@ const selector = useSelector(state=>state.auth.user)
                 </div>
 
                 {/* Quick Action Button */}
-                <button className="w-full mt-6 bg-black dark:bg-white text-white dark:text-black font-bold py-3.5 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-transform text-sm shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                <Link to="/TradingTerminal" className="w-full text-center mt-6 bg-black dark:bg-white text-white dark:text-black font-bold py-3.5 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-transform text-sm shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                   Launch Execution Terminal
-                </button>
+                </Link>
               </motion.div>
 
             </div>

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
 
 // --- Mock Challenges Data ---
 const activeChallenge = {
@@ -26,6 +29,31 @@ const availablePrograms = [
 
 export default function Challenges() {
   const [isDark, setIsDark] = useState(true);
+  const [selectedProgram, setSelectedProgram] = useState(() => localStorage.getItem('tradex_challenge') || 'tier-2');
+  const user = useSelector(state => state.auth.user);
+  const { metrics } = useTradingAccount(user?._id);
+  const selected = availablePrograms.find(program => program.id === selectedProgram) || availablePrograms[1];
+  const challengeSize = Number(selected.size.replace(/[^0-9]/g, '')) * 1000;
+  const currentProfit = metrics.totalEquity - 100000;
+  const activeChallenge = {
+    id: `EVAL-${selectedProgram.toUpperCase()}`,
+    tier: selected.name,
+    phase: 'Phase 1',
+    status: 'Active',
+    daysLeft: 30,
+    startingBalance: challengeSize,
+    currentBalance: challengeSize + currentProfit,
+    profitTarget: challengeSize * 0.08,
+    currentProfit: Math.max(currentProfit, 0),
+    maxDailyLoss: challengeSize * 0.05,
+    currentDailyLoss: Math.max(-currentProfit, 0),
+    maxTotalLoss: challengeSize * 0.1,
+    currentTotalLoss: Math.max(-currentProfit, 0)
+  };
+  const startChallenge = program => {
+    localStorage.setItem('tradex_challenge', program.id);
+    setSelectedProgram(program.id);
+  };
 
   useEffect(() => {
     if (isDark) {
@@ -95,9 +123,9 @@ export default function Challenges() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <a href="/Dashboard" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-lg shrink-0 whitespace-nowrap">
+          <Link to="/TradingTerminal" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-lg shrink-0 whitespace-nowrap">
             Back to Terminal
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -251,8 +279,8 @@ export default function Challenges() {
                     </div>
                   </div>
 
-                  <button className={`w-full py-4 rounded-xl font-bold text-sm transition-all shadow-lg ${program.popular ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-white text-black hover:bg-zinc-200'}`}>
-                    Start Challenge · {program.fee}
+                  <button onClick={() => startChallenge(program)} className={`w-full py-4 rounded-xl font-bold text-sm transition-all shadow-lg ${program.popular ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-white text-black hover:bg-zinc-200'}`}>
+                    {selectedProgram === program.id ? 'Active Challenge' : `Start Challenge · ${program.fee}`}
                   </button>
                 </motion.div>
               ))}

@@ -1,15 +1,70 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { deleteAccount, resetPaperAccount, updateProfile } from '../api/tradingApi';
+import { loginuser, logoutuser } from '../redux/authSlice';
 
 export default function AccountSettings() {
   const [activeTab, setActiveTab] = useState('Profile');
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const user = useSelector(state => state.auth.user);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   
   // Using user's profile data implicitly integrated
   const [profileData, setProfileData] = useState({
-    name: 'Vipul Gupta',
-    email: 'vipulgupta92998@gmail.com',
-    workspace: 'Personal Sandbox'
+    name: user?.name || '',
+    email: user?.email || '',
+    workspace: localStorage.getItem('tradex_workspace') || 'Personal Sandbox'
   });
+  const [preferences, setPreferences] = useState(() => ({
+    orderUpdates: localStorage.getItem('tradex_order_notifications') !== 'false',
+    marketAlerts: localStorage.getItem('tradex_market_notifications') !== 'false'
+  }));
+
+  const saveProfile = async () => {
+    if (!user?._id) return;
+    setSaving(true);
+    setMessage('');
+    try {
+      const response = await updateProfile(user._id, { name: profileData.name });
+      localStorage.setItem('tradex_workspace', profileData.workspace);
+      dispatch(loginuser(response.data.user));
+      setMessage('Profile saved successfully.');
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const changePlan = async plan => {
+    const response = await updateProfile(user._id, { plan });
+    dispatch(loginuser(response.data.user));
+    setMessage(`Plan changed to ${plan}.`);
+  };
+
+  const savePreferences = () => {
+    localStorage.setItem('tradex_order_notifications', String(preferences.orderUpdates));
+    localStorage.setItem('tradex_market_notifications', String(preferences.marketAlerts));
+    setMessage('Notification preferences saved.');
+  };
+
+  const resetAccount = async () => {
+    if (!window.confirm('Reset virtual balance, positions, and orders?')) return;
+    await resetPaperAccount(user._id);
+    dispatch(loginuser({ ...user, virtualBalance: 100000, totalPortfolioValue: 100000 }));
+    setMessage('Paper trading account reset.');
+  };
+
+  const removeAccount = async () => {
+    if (!window.confirm('Permanently delete this account and all trading data?')) return;
+    await deleteAccount(user._id);
+    dispatch(logoutuser());
+    navigate('/');
+  };
 
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
@@ -82,8 +137,46 @@ export default function AccountSettings() {
               </div>
 
               <div className="pt-6 flex justify-end">
-                <button className="px-8 py-3.5 rounded-xl bg-white text-black font-bold text-sm hover:scale-[1.02] transition-transform">Save Changes</button>
+                <button disabled={saving} onClick={saveProfile} className="px-8 py-3.5 rounded-xl bg-white text-black font-bold text-sm hover:scale-[1.02] transition-transform disabled:opacity-50">{saving ? 'Saving...' : 'Save Changes'}</button>
               </div>
+              {message && <p className="text-sm text-emerald-400 text-right">{message}</p>}
+            </motion.div>
+          )}
+
+          {activeTab === 'Security' && (
+            <motion.div variants={item} className="space-y-6">
+              <h2 className="text-2xl font-bold">Security</h2>
+              <p className="text-sm text-zinc-500">Your password is encrypted. Sign out on shared devices after trading.</p>
+              <button onClick={() => { dispatch(logoutuser()); navigate('/Login'); }} className="px-6 py-3 rounded-xl bg-white/10 font-bold hover:bg-white/20">Sign out securely</button>
+            </motion.div>
+          )}
+
+          {activeTab === 'Billing & Plans' && (
+            <motion.div variants={item} className="space-y-6">
+              <h2 className="text-2xl font-bold">Billing & Plans</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {['free', 'pro', 'enterprise'].map(plan => (
+                  <button key={plan} onClick={() => changePlan(plan)} className={`p-5 rounded-2xl border text-left capitalize ${user?.plan === plan ? 'border-rose-500 bg-rose-500/10' : 'border-white/10 bg-white/5'}`}>
+                    <span className="font-bold">{plan}</span>
+                    <span className="block text-xs text-zinc-500 mt-2">{user?.plan === plan ? 'Current plan' : 'Select plan'}</span>
+                  </button>
+                ))}
+              </div>
+              {message && <p className="text-sm text-emerald-400">{message}</p>}
+            </motion.div>
+          )}
+
+          {activeTab === 'Notifications' && (
+            <motion.div variants={item} className="space-y-6">
+              <h2 className="text-2xl font-bold">Notifications</h2>
+              {[['orderUpdates', 'Order confirmations and status updates'], ['marketAlerts', 'Watchlist and market alerts']].map(([key, label]) => (
+                <label key={key} className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10">
+                  <span>{label}</span>
+                  <input type="checkbox" checked={preferences[key]} onChange={event => setPreferences(current => ({ ...current, [key]: event.target.checked }))} className="w-5 h-5" />
+                </label>
+              ))}
+              <button onClick={savePreferences} className="px-6 py-3 rounded-xl bg-white text-black font-bold">Save preferences</button>
+              {message && <p className="text-sm text-emerald-400">{message}</p>}
             </motion.div>
           )}
 
@@ -93,12 +186,19 @@ export default function AccountSettings() {
                 <h2 className="text-2xl font-bold mb-1 text-rose-500">Danger Zone</h2>
                 <p className="text-sm text-zinc-500">Irreversible, destructive actions regarding your account.</p>
               </div>
+              <div className="p-6 border border-amber-500/20 rounded-2xl bg-amber-500/5 flex justify-between items-center">
+                <div>
+                  <h4 className="font-bold text-white mb-1">Reset Paper Account</h4>
+                  <p className="text-xs text-zinc-500">Clear orders and positions, then restore ₹100,000 virtual cash.</p>
+                </div>
+                <button onClick={resetAccount} className="px-6 py-2.5 rounded-xl bg-amber-500 text-black font-bold text-sm">Reset</button>
+              </div>
               <div className="p-6 border border-rose-500/20 rounded-2xl bg-rose-500/5 flex justify-between items-center">
                 <div>
                   <h4 className="font-bold text-white mb-1">Delete Account</h4>
                   <p className="text-xs text-rose-200/60">Permanently delete your data and API keys.</p>
                 </div>
-                <button className="px-6 py-2.5 rounded-xl bg-rose-500 text-white font-bold text-sm hover:bg-rose-600 transition-colors">Delete Account</button>
+                <button onClick={removeAccount} className="px-6 py-2.5 rounded-xl bg-rose-500 text-white font-bold text-sm hover:bg-rose-600 transition-colors">Delete Account</button>
               </div>
             </motion.div>
           )}

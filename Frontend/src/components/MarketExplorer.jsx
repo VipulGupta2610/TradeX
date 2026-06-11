@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
 
 // --- Mock Explorer Data ---
 const macroMetrics = [
@@ -28,6 +31,8 @@ const heatmapAssets = [
 export default function MarketExplorer() {
   const [isDark, setIsDark] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
+  const user = useSelector(state => state.auth.user);
+  const { addToWatchlist } = useTradingAccount(user?._id);
 
   useEffect(() => {
     if (isDark) {
@@ -170,7 +175,7 @@ export default function MarketExplorer() {
                       >
                         <div className="flex justify-between items-start">
                           <span className="font-black text-xl tracking-tight">{asset.ticker}</span>
-                          <button className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => addToWatchlist({ symbol: asset.ticker === 'BTC' || asset.ticker === 'ETH' || asset.ticker === 'SOL' ? `${asset.ticker}/USD` : asset.ticker, name: asset.name, type: ['BTC', 'ETH', 'SOL'].includes(asset.ticker) ? 'Crypto' : 'Stocks', exchange: '' })} className="opacity-0 group-hover:opacity-100 transition-opacity" title="Add to watchlist">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                           </button>
                         </div>
@@ -253,9 +258,9 @@ export default function MarketExplorer() {
                   ))}
                 </div>
                 
-                <button className="w-full mt-6 py-3 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/5 transition-colors">
+                <Link to="/Markets" className="block text-center w-full mt-6 py-3 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/5 transition-colors">
                   View Full Screener
-                </button>
+                </Link>
               </div>
 
             </motion.div>

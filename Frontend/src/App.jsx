@@ -109,12 +109,12 @@ const App = () => {
         path:"/Subscription",
         element:<Subscription/>
       },
-      {
+    
+    ]
+  },  {
         path:"/TradingTerminal",
         element:<TradingTerminal/>
-      },
-    ]
-  }])
+      },])
 
   return <RouterProvider router={router}></RouterProvider>
 }

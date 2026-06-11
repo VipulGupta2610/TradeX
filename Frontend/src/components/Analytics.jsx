@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
 
 // --- Mock Analytics Data ---
 const kpiData = [
@@ -18,6 +21,29 @@ const volumeData = [
 export default function Analytics() {
   const [isDark, setIsDark] = useState(true);
   const [timeframe, setTimeframe] = useState('YTD');
+  const user = useSelector(state => state.auth.user);
+  const { positions, orders, metrics } = useTradingAccount(user?._id);
+  const pnlPercent = metrics.invested ? (metrics.unrealizedPnl / metrics.invested) * 100 : 0;
+  const completed = orders.filter(order => order.status === 'COMPLETE');
+  const kpiData = [
+    { label: 'Unrealized PnL', value: `${metrics.unrealizedPnl >= 0 ? '+' : '-'}₹${Math.abs(metrics.unrealizedPnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, trend: `${pnlPercent.toFixed(2)}%`, isPositive: metrics.unrealizedPnl >= 0 },
+    { label: 'Executed Orders', value: String(completed.length), trend: `${metrics.openOrders} open`, isPositive: true },
+    { label: 'Portfolio Equity', value: `₹${metrics.totalEquity.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, trend: `${positions.length} assets`, isPositive: true },
+    { label: 'Capital at Risk', value: `₹${metrics.invested.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, trend: `${metrics.totalEquity ? (metrics.invested / metrics.totalEquity * 100).toFixed(1) : 0}%`, isPositive: metrics.invested <= metrics.totalEquity }
+  ];
+  const allocation = positions.reduce((totals, position) => {
+    const key = position.type === 'Crypto' ? 'Crypto' : position.type === 'Forex' ? 'Forex' : 'Equities';
+    totals[key] = (totals[key] || 0) + position.value;
+    return totals;
+  }, {});
+  const volumeData = [
+    { asset: 'Crypto', value: allocation.Crypto || 0, color: 'bg-emerald-500' },
+    { asset: 'Equities', value: allocation.Equities || 0, color: 'bg-blue-500' },
+    { asset: 'Forex', value: allocation.Forex || 0, color: 'bg-purple-500' }
+  ].map(item => ({
+    ...item,
+    volume: `${metrics.marketValue ? (item.value / metrics.marketValue * 100).toFixed(1) : '0.0'}%`
+  }));
 
   useEffect(() => {
     if (isDark) {
@@ -78,9 +104,9 @@ export default function Analytics() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <a href="/Dashboard" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+          <Link to="/TradingTerminal" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
             Execution Terminal
-          </a>
+          </Link>
         </div>
       </nav>
 

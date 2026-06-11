@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
+import { exportCsv } from '../utils/exportCsv';
 
 // --- Mock Order History Data ---
 const orderHistory = [
@@ -15,6 +19,22 @@ const orderHistory = [
 export default function OrderHistory() {
   const [isDark, setIsDark] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [search, setSearch] = useState('');
+  const user = useSelector(state => state.auth.user);
+  const { orders, metrics } = useTradingAccount(user?._id);
+  const orderHistory = orders.map(order => ({
+    id: order.id,
+    time: order.time,
+    date: new Date().toLocaleDateString('en-IN'),
+    market: order.sym,
+    type: order.type,
+    side: order.side,
+    size: `${order.qty} units`,
+    price: `₹${Number(order.price || 0).toLocaleString('en-IN')}`,
+    total: `₹${(Number(order.price || 0) * Number(order.qty || 0)).toLocaleString('en-IN')}`,
+    fee: '₹0.00',
+    status: order.status === 'COMPLETE' ? 'Filled' : order.status === 'OPEN' ? 'Pending' : 'Canceled'
+  }));
 
   useEffect(() => {
     if (isDark) {
@@ -27,6 +47,9 @@ export default function OrderHistory() {
   const filteredOrders = activeFilter === 'All' 
     ? orderHistory 
     : orderHistory.filter(order => order.status === activeFilter);
+  const searchedOrders = filteredOrders.filter(order =>
+    `${order.id} ${order.market}`.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Framer Motion Variants
   const container = {
@@ -70,9 +93,9 @@ export default function OrderHistory() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <a href="/Dashboard" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+          <Link to={user?._id ? `/Dashboard/${user._id}` : '/Login'} className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
             Back to Terminal
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -93,15 +116,15 @@ export default function OrderHistory() {
             <motion.div variants={item} className="flex gap-4 w-full xl:w-auto overflow-x-auto scrollbar-hide pb-2">
               <div className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-5 min-w-[160px] shadow-sm">
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">30D Volume</p>
-                <p className="text-2xl font-mono font-black">$4.2M</p>
+                <p className="text-2xl font-mono font-black">₹{orders.reduce((sum, order) => sum + Number(order.price || 0) * Number(order.qty || 0), 0).toLocaleString('en-IN')}</p>
               </div>
               <div className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-5 min-w-[160px] shadow-sm">
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Trades</p>
-                <p className="text-2xl font-mono font-black">1,842</p>
+                <p className="text-2xl font-mono font-black">{orders.length}</p>
               </div>
               <div className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-5 min-w-[160px] shadow-sm">
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Fill Rate</p>
-                <p className="text-2xl font-mono font-black text-emerald-500">98.4%</p>
+                <p className="text-2xl font-mono font-black text-emerald-500">{orders.length ? ((metrics.executedOrders / orders.length) * 100).toFixed(1) : '0.0'}%</p>
               </div>
             </motion.div>
           </div>
@@ -129,9 +152,9 @@ export default function OrderHistory() {
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="relative flex-1 md:w-64">
                   <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  <input type="text" placeholder="Search Order ID or Market..." className="w-full bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500/50 transition-colors shadow-inner" />
+                  <input value={search} onChange={event => setSearch(event.target.value)} type="text" placeholder="Search Order ID or Market..." className="w-full bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500/50 transition-colors shadow-inner" />
                 </div>
-                <button className="px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
+                <button onClick={() => exportCsv('tradex-orders.csv', searchedOrders)} className="px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   CSV
                 </button>
@@ -154,7 +177,7 @@ export default function OrderHistory() {
                 </thead>
                 <tbody className="text-sm">
                   <AnimatePresence mode="popLayout">
-                    {filteredOrders.map((order, index) => (
+                    {searchedOrders.map((order, index) => (
                       <motion.tr 
                         key={order.id}
                         layout
@@ -221,7 +244,7 @@ export default function OrderHistory() {
                 </tbody>
               </table>
               
-              {filteredOrders.length === 0 && (
+              {searchedOrders.length === 0 && (
                 <div className="py-20 text-center flex flex-col items-center justify-center">
                   <div className="w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-4">
                     <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -234,7 +257,7 @@ export default function OrderHistory() {
             
             {/* Pagination / Footer */}
             <div className="p-6 border-t border-black/5 dark:border-white/[0.05] flex justify-between items-center bg-black/[0.01] dark:bg-white/[0.01]">
-              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Showing {filteredOrders.length} records</p>
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Showing {searchedOrders.length} records</p>
               <div className="flex gap-2">
                 <button className="w-8 h-8 rounded-lg flex items-center justify-center border border-black/10 dark:border-white/10 text-zinc-500 hover:text-white transition-colors disabled:opacity-50" disabled>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>

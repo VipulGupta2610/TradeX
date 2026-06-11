@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
+import { exportCsv } from '../utils/exportCsv';
 
 // --- Mock Trade History Data ---
 const tradeHistory = [
@@ -15,6 +19,22 @@ const tradeHistory = [
 export default function TradeHistory() {
   const [isDark, setIsDark] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [search, setSearch] = useState('');
+  const user = useSelector(state => state.auth.user);
+  const { orders } = useTradingAccount(user?._id);
+  const tradeHistory = orders.filter(order => order.status === 'COMPLETE').map(order => ({
+    id: order.id,
+    time: order.time,
+    date: new Date().toLocaleDateString('en-IN'),
+    market: order.sym,
+    side: order.side === 'BUY' ? 'LONG' : 'SHORT',
+    action: order.side === 'BUY' ? 'Open' : 'Close',
+    size: `${order.qty} units`,
+    execPrice: `₹${Number(order.price || 0).toLocaleString('en-IN')}`,
+    fee: '₹0.00',
+    realizedPnL: '-',
+    isWin: null
+  }));
 
   useEffect(() => {
     if (isDark) {
@@ -31,6 +51,9 @@ export default function TradeHistory() {
       : activeFilter === 'Losses'
         ? tradeHistory.filter(trade => trade.isWin === false)
         : tradeHistory.filter(trade => trade.action === 'Open');
+  const searchedTrades = filteredTrades.filter(trade =>
+    `${trade.id} ${trade.market}`.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Framer Motion Variants
   const container = {
@@ -74,9 +97,9 @@ export default function TradeHistory() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <a href="/Dashboard" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+          <Link to={user?._id ? `/Dashboard/${user._id}` : '/Login'} className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
             Back to Terminal
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -137,9 +160,9 @@ export default function TradeHistory() {
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="relative flex-1 md:w-64">
                   <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  <input type="text" placeholder="Search Trade ID or Market..." className="w-full bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors shadow-inner" />
+                  <input value={search} onChange={event => setSearch(event.target.value)} type="text" placeholder="Search Trade ID or Market..." className="w-full bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors shadow-inner" />
                 </div>
-                <button className="px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
+                <button onClick={() => exportCsv('tradex-trades.csv', searchedTrades)} className="px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   Export PnL
                 </button>
@@ -162,7 +185,7 @@ export default function TradeHistory() {
                 </thead>
                 <tbody className="text-sm">
                   <AnimatePresence mode="popLayout">
-                    {filteredTrades.map((trade, index) => (
+                    {searchedTrades.map((trade, index) => (
                       <motion.tr 
                         key={trade.id}
                         layout
@@ -242,7 +265,7 @@ export default function TradeHistory() {
                 </tbody>
               </table>
               
-              {filteredTrades.length === 0 && (
+              {searchedTrades.length === 0 && (
                 <div className="py-20 text-center flex flex-col items-center justify-center">
                   <div className="w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-4">
                     <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -254,7 +277,7 @@ export default function TradeHistory() {
             
             {/* Pagination / Footer */}
             <div className="p-6 border-t border-black/5 dark:border-white/[0.05] flex justify-between items-center bg-black/[0.01] dark:bg-white/[0.01]">
-              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Showing {filteredTrades.length} records</p>
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Showing {searchedTrades.length} records</p>
               <div className="flex gap-2">
                 <button className="w-8 h-8 rounded-lg flex items-center justify-center border border-black/10 dark:border-white/10 text-zinc-500 hover:text-white transition-colors disabled:opacity-50" disabled>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>

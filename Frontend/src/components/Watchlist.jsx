@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
+import { useTradingAccount } from '../hooks/useTradingAccount';
 
 // --- Mock Watchlist Data ---
 const watchlistData = [
@@ -16,6 +19,38 @@ const watchlistData = [
 export default function Watchlist() {
   const [isDark, setIsDark] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [symbolInput, setSymbolInput] = useState('');
+  const user = useSelector(state => state.auth.user);
+  const navigate = useNavigate();
+  const { watchlist, quotes, addToWatchlist, removeFromWatchlist } = useTradingAccount(user?._id);
+  const watchlistData = watchlist.map(item => {
+    const quote = quotes[item.symbol] || {};
+    const changePct = Number(quote.changePct || 0);
+    return {
+      id: item._id || item.symbol,
+      ticker: item.symbol,
+      name: item.name || quote.name || item.symbol,
+      type: item.type === 'Stocks' ? 'Equities' : item.type,
+      price: `₹${Number(quote.price || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+      change: `₹${Math.abs((Number(quote.price || 0) - Number(quote.prevPrice || 0))).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+      changePct: `${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%`,
+      isUp: changePct >= 0,
+      vol: 'Live',
+      sparkline: changePct >= 0 ? "M0,40 Q20,35 40,28 T70,20 T100,8" : "M0,10 Q20,18 40,25 T70,38 T100,45"
+    };
+  });
+  const handleAdd = async () => {
+    const symbol = symbolInput.trim().toUpperCase();
+    if (!symbol || !user?._id) return;
+    const quote = quotes[symbol];
+    await addToWatchlist({
+      symbol,
+      name: quote?.name || symbol,
+      type: quote?.type || (symbol.includes('/') ? 'Crypto' : 'Stocks'),
+      exchange: ''
+    });
+    setSymbolInput('');
+  };
 
   useEffect(() => {
     if (isDark) {
@@ -81,9 +116,9 @@ export default function Watchlist() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             )}
           </button>
-          <a href="/Dashboard" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+          <Link to="/TradingTerminal" className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
             Execution Terminal
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -131,8 +166,8 @@ export default function Watchlist() {
 
             <div className="relative w-full sm:w-72">
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input type="text" placeholder="Add ticker to watchlist..." className="w-full bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/10 dark:border-white/[0.08] rounded-xl pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors shadow-sm" />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black dark:bg-white text-white dark:text-black rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
+              <input value={symbolInput} onChange={event => setSymbolInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') handleAdd(); }} type="text" placeholder="Add ticker to watchlist..." className="w-full bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/10 dark:border-white/[0.08] rounded-xl pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors shadow-sm" />
+              <button onClick={handleAdd} className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black dark:bg-white text-white dark:text-black rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               </button>
             </div>
@@ -164,8 +199,8 @@ export default function Watchlist() {
                         <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">{asset.name}</p>
                       </div>
                     </div>
-                    <button className="text-zinc-600 hover:text-emerald-500 transition-colors opacity-0 group-hover:opacity-100 p-1">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                    <button onClick={() => removeFromWatchlist(asset.ticker)} className="text-zinc-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 p-1" title="Remove">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
 
@@ -209,10 +244,10 @@ export default function Watchlist() {
 
                   {/* Quick Execution Overlay */}
                   <div className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto">
-                    <button className="px-6 py-3 rounded-xl bg-emerald-500 text-black font-bold text-sm hover:scale-105 transition-transform shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                    <button onClick={() => navigate('/TradingTerminal')} className="px-6 py-3 rounded-xl bg-emerald-500 text-black font-bold text-sm hover:scale-105 transition-transform shadow-[0_0_20px_rgba(16,185,129,0.3)]">
                       Buy
                     </button>
-                    <button className="px-6 py-3 rounded-xl bg-rose-500 text-white font-bold text-sm hover:scale-105 transition-transform shadow-[0_0_20px_rgba(244,63,94,0.3)]">
+                    <button onClick={() => navigate('/TradingTerminal')} className="px-6 py-3 rounded-xl bg-rose-500 text-white font-bold text-sm hover:scale-105 transition-transform shadow-[0_0_20px_rgba(244,63,94,0.3)]">
                       Sell
                     </button>
                   </div>
