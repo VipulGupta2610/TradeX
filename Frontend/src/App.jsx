@@ -1,4 +1,3 @@
-import React from 'react';
 import {createBrowserRouter, RouterProvider} from "react-router-dom"
 import Applayout from './Layout/Applayout';
 import Home from './components/Home';
@@ -22,10 +21,9 @@ import ApiDashboard from './components/ApiDashboard';
 import Subscription from './components/Subscription';
 import LearningCenter from './components/LearningCenter';
 import AccountSettings from './components/AccountSettings';
+import NotFound from './components/NotFound';
 
-const App = () => {
-
-  const router = createBrowserRouter([{
+const router = createBrowserRouter([{
     path:"/",
     element:<Applayout/>,
     children:[
@@ -109,6 +107,10 @@ const App = () => {
         path:"/Subscription",
         element:<Subscription/>
       },
+      {
+        path:"*",
+        element:<NotFound/>
+      },
     
     ]
   },  {
@@ -116,7 +118,6 @@ const App = () => {
         element:<TradingTerminal/>
       },])
 
-  return <RouterProvider router={router}></RouterProvider>
-}
+const App = () => <RouterProvider router={router} />;
 
 export default App;

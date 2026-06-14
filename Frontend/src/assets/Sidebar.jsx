@@ -1,85 +1,106 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
+import ThemeToggle from '../components/ThemeToggle';
 
 function Sidebar() {
-  const selector = useSelector((state) => state?.auth?.user);
-
-  // FIXED: Added state to track the active tab
-  const [activeTab, setActiveTab] = useState('Overview');
+  const user = useSelector((state) => state?.auth?.user);
+  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+  const userPath = (route) => user?._id ? `/${route}/${user._id}` : '/Login';
+  const navigation = [
+    ['Overview', userPath('Dashboard')],
+    ['Portfolio', userPath('Portfolio')],
+    ['Analytics', userPath('Analytics')],
+    ['Watchlist', userPath('Watchlist')],
+    ['Positions', userPath('Positions')],
+    ['TradingTerminal', '/TradingTerminal'],
+    ['Order History', '/OrderHistory'],
+    ['Trade History', '/TradeHistory'],
+    ['Trade Journal', '/TradeJournal'],
+    ['Market Explorer', '/MarketExplorer'],
+    ['Leaderboard', '/Leaderboard'],
+    ['Challenges', '/Challenges'],
+    ['AI Coach', '/AICoach'],
+    ['Learning Center', '/LearningCenter'],
+    ['Subscription', '/Subscription'],
+  ];
 
   return (
-    <aside className="w-64 border-r border-black/5 dark:border-white/5 bg-white/50 dark:bg-[#050505]/50 backdrop-blur-xl flex flex-col justify-between z-20 relative">
-      <div>
-        <div className="h-20 flex items-center px-8 border-b border-black/5 dark:border-white/5">
-          <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center rounded-lg font-black text-xs mr-3">TX</div>
-          <span className="font-bold tracking-[0.2em] text-sm">TRADEX.IO</span>
-        </div>
-
-        <div className="p-4 space-y-1 mt-4">
-          <p className="px-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Terminal</p>
-          {[
-            ['Overview', `/Dashboard/${selector?._id || ''}`],
-            ['Portfolio', `/Portfolio/${selector?._id || ''}`],
-            ['Analytics', `/Analytics/${selector?._id || ''}`],
-            ['WatchList', `/Watchlist/${selector?._id || ''}`],
-            ['Positions', `/Positions/${selector?._id || ''}`],
-            ['Order History', `/OrderHistory`],
-            ['Trade History', `/TradeHistory`],
-            ['Trade Journal', `/TradeJournal`],
-            ['Market Explorer', `/MarketExplorer`],
-            ['Leaderboard', `/Leaderboard`],
-            ['Challenges', `/Challenges`],
-            ['AICoach', `/AICoach`],
-            ['LearningCenter', `/LearningCenter`],
-            ['Subscription', `/Subscription`],
-          ].map(([tab, path]) => (
-            // FIXED: Removed redundant <button> tag and placed properties directly on <Link>
-            <Link
-              key={tab}
-              to={path}
-              onClick={() => setActiveTab(tab)}
-              className={`w-full flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab
-                ? 'bg-black/5 dark:bg-white/10 text-black dark:text-white'
-                : 'text-zinc-500 hover:text-black dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
-                }`}
-            >
-              {tab}
-            </Link>
-          ))}
-
-          <p className="px-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-8 mb-2">Developer</p>
-          {['API Keys', 'Webhooks', 'Documentation'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="w-full flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-all text-zinc-500 hover:text-black dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-            >
-              {tab}
-            </button>
-          ))}
+    <aside className="relative z-40 flex h-auto w-full shrink-0 flex-col border-b border-black/5 bg-white/90 backdrop-blur-xl dark:border-white/5 dark:bg-[#050505]/90 md:h-full md:w-64 md:border-b-0 md:border-r">
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-black/5 px-4 dark:border-white/5 md:h-20 md:px-8">
+        <Link to="/" className="flex min-w-0 items-center">
+          <div className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black text-xs font-black text-white dark:bg-white dark:text-black">TX</div>
+          <span className="truncate text-sm font-bold tracking-[0.2em] text-black dark:text-white">TRADEX.IO</span>
+        </Link>
+        <div className="ml-auto flex items-center gap-2 md:hidden">
+          <ThemeToggle className="p-2" />
+          <button
+            type="button"
+            onClick={() => setIsOpen((open) => !open)}
+            className="rounded-lg p-2 hover:bg-black/5 dark:hover:bg-white/10"
+            aria-expanded={isOpen}
+            aria-label="Toggle dashboard navigation"
+          >
+            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
 
-      {/* User Profile Footer */}
+      <div className={`${isOpen ? 'block' : 'hidden'} max-h-[70vh] flex-1 space-y-1 overflow-y-auto p-4 md:block md:max-h-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}>
+        {/* <p className="mb-2 mt-2 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Terminal</p> */}
+        {navigation.map(([label, path]) => {
+          const isActive = location.pathname === path || (label === 'Overview' && location.pathname.startsWith('/Dashboard/'));
+          return (
+            <Link
+              key={label}
+              to={path}
+              onClick={() => setIsOpen(false)}
+              className={`flex w-full items-center rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-black/5 text-black dark:bg-white/10 dark:text-white'
+                  : 'text-zinc-500 hover:bg-black/[0.02] hover:text-black dark:hover:bg-white/[0.02] dark:hover:text-white'
+              }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
 
-      <Link to={`/AccountSettings/${selector?._id}`}>
-        <div className="p-4 border-t border-black/5 dark:border-white/5">
-          <div className="flex items-center gap-3 px-4 py-3 bg-black/5 dark:bg-white/5 rounded-xl cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-xs shadow-inner">
-              VG
+        <p className="mb-2 mt-8 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Developer</p>
+        {[
+          ['API Keys', '/ApiDashboard'],
+          ['Webhooks', '/ApiDashboard'],
+          ['Documentation', '/LearningCenter'],
+        ].map(([label, path]) => (
+          <Link
+            key={label}
+            to={path}
+            onClick={() => setIsOpen(false)}
+            className="flex w-full items-center rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-500 transition-all hover:bg-black/[0.02] hover:text-black dark:hover:bg-white/[0.02] dark:hover:text-white"
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      <div className={`${isOpen ? 'block' : 'hidden'} shrink-0 border-t border-black/5 bg-white/50 p-4 backdrop-blur-md dark:border-white/5 dark:bg-[#050505]/50 md:block`}>
+        <Link to={userPath('AccountSettings')} onClick={() => setIsOpen(false)}>
+          <div className="flex items-center gap-3 rounded-xl bg-black/5 px-4 py-3 transition-colors hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 text-xs font-bold text-white shadow-inner">
+              {(user?.name || 'Trader').slice(0, 2).toUpperCase()}
             </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate text-black dark:text-white">{selector?.name || 'Trader'}</p>
-              <p className="text-[10px] text-zinc-500 font-mono truncate">{selector?.plan || 'free'} Tier</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold capitalize text-black dark:text-white">{user?.name || 'Trader'}</p>
+              <p className="truncate font-mono text-[10px] text-zinc-500">{user?.plan || 'free'} Tier</p>
             </div>
-            <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 shrink-0 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
             </svg>
           </div>
-        </div>
-      </Link>
-
+        </Link>
+      </div>
     </aside>
   );
 }

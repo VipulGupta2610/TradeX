@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { io } from "socket.io-client";
+import ThemeToggle from "./ThemeToggle";
 
 // ─── Socket (singleton outside component to avoid re-connects) ───────────────
 const socket = io("http://localhost:2222", {
@@ -107,7 +108,6 @@ export default function Markets() {
   const [assets, setAssets]           = useState(() =>
     ASSET_META.map(m => ({ ...m, price: null, changePct: null, flash: null, history: [] }))
   );
-  const [isDark, setIsDark]           = useState(true);
   const [viewMode, setViewMode]       = useState("list");
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,6 +121,7 @@ export default function Markets() {
 
   // ── Socket effects ─────────────────────────────────────────────────────────
   useEffect(() => {
+    const timers = flashTimers.current;
     socket.on("connect",    () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
@@ -159,15 +160,15 @@ export default function Markets() {
         const flash     = wasHigher ? "up" : wasLower ? "down" : null;
 
         // Clear previous flash timer
-        if (flashTimers.current[symbol]) {
-          clearTimeout(flashTimers.current[symbol]);
+        if (timers[symbol]) {
+          clearTimeout(timers[symbol]);
         }
 
         return { ...a, price, changePct, history: newHistory, flash };
       }));
 
       // Clear flash after 800ms
-      flashTimers.current[symbol] = setTimeout(() => {
+      timers[symbol] = setTimeout(() => {
         setAssets(prev => prev.map(a =>
           a.symbol === symbol ? { ...a, flash: null } : a
         ));
@@ -181,14 +182,11 @@ export default function Markets() {
       socket.off("disconnect");
       socket.off("snapshot");
       socket.off("price-update");
-      Object.values(flashTimers.current).forEach(clearTimeout);
+      Object.values(timers).forEach(clearTimeout);
     };
   }, []);
 
   // ── Dark mode ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-  }, [isDark]);
 
   // ── Filter + sort + search ─────────────────────────────────────────────────
   const filteredAssets = assets
@@ -237,7 +235,7 @@ export default function Markets() {
     exit:   { opacity: 0, scale: 0.96, transition: { duration: 0.2 } }
   };
 
-  const SortIcon = ({ col }) => {
+  const sortIcon = (col) => {
     if (sortBy !== col) return <span className="ml-1 opacity-20">↕</span>;
     return <span className="ml-1 text-emerald-500">{sortDir === "asc" ? "↑" : "↓"}</span>;
   };
@@ -277,16 +275,8 @@ export default function Markets() {
             {connected ? "LIVE" : "OFFLINE"}
           </div>
 
-          <button
-            onClick={() => setIsDark(!isDark)}
-            className="p-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-          >
-            {isDark
-              ? <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-              : <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-            }
-          </button>
-          <a href="/dashboard" className="px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:opacity-90 transition-opacity">
+          <ThemeToggle />
+          <a href="/TradingTerminal" className="px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:opacity-90 transition-opacity">
             Terminal →
           </a>
         </div>
@@ -442,14 +432,14 @@ export default function Markets() {
               {/* Table header */}
               <div className="grid grid-cols-12 gap-3 px-6 py-4 border-b border-black/5 dark:border-white/5 text-xs font-bold uppercase tracking-widest text-zinc-400">
                 <button onClick={() => handleSort("name")} className="col-span-4 lg:col-span-3 text-left hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
-                  Asset <SortIcon col="name" />
+                  Asset {sortIcon("name")}
                 </button>
                 <div className="col-span-2 hidden lg:block">Type</div>
                 <button onClick={() => handleSort("price")} className="col-span-4 lg:col-span-2 text-right hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors w-full">
-                  Price <SortIcon col="price" />
+                  Price {sortIcon("price")}
                 </button>
                 <button onClick={() => handleSort("change")} className="col-span-4 lg:col-span-2 text-right hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors w-full">
-                  24h % <SortIcon col="change" />
+                  24h % {sortIcon("change")}
                 </button>
                 <div className="col-span-3 hidden lg:block text-right">Trend</div>
               </div>

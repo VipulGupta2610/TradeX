@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -26,7 +26,6 @@ const mockHoldings = [
 ];
 
 export default function PortfolioUltra() {
-  const [isDark, setIsDark] = useState(true);
   const [timeframe, setTimeframe] = useState('1M');
   const user = useSelector(state => state.auth.user);
   
@@ -66,14 +65,6 @@ export default function PortfolioUltra() {
       }
     : mockMetrics;
 
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
-
   const container = {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -85,7 +76,7 @@ export default function PortfolioUltra() {
 
   return (
     // FIXED: Changed to h-screen, removed pt-10, and set flex row to constrain layout to viewport
-    <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans relative flex overflow-hidden">
+    <div className="relative flex min-h-screen flex-col bg-gray-100 font-sans text-gray-800 transition-colors duration-500 dark:bg-gray-900 dark:text-gray-100 md:h-screen md:flex-row md:overflow-hidden">
       
       {/* --- IMMERSIVE BACKGROUND --- */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -98,8 +89,8 @@ export default function PortfolioUltra() {
       <Sidebar />
 
       {/* FIXED: <main> takes the rest of the screen and controls its own scrolling. The max-w wrapper goes inside so the scrollbar hugs the right edge of the screen. */}
-      <main className="flex-1 relative py-15 z-10 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 py-12">
+      <main className="relative z-10 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:px-10 md:py-12">
           <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
 
             {/* TOP SECTION: ASYMMETRICAL BENTO */}
@@ -113,7 +104,7 @@ export default function PortfolioUltra() {
                     <h2 className="text-sm font-semibold uppercase text-green-600 mb-2 flex items-center gap-2">
                       <span className="w-3 h-3 bg-green-400 rounded-full animate-pulse" /> Live Equity
                     </h2>
-                    <h1 className="text-6xl font-extrabold tracking-tight mb-4">{displayMetrics.totalBalance}</h1>
+                    <h1 className="mb-4 break-words text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">{displayMetrics.totalBalance}</h1>
                     <div className="flex items-center gap-4 text-green-500 font-semibold">
                       <span className="text-xl">{displayMetrics.dailyPnL}</span>
                       <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-bold flex items-center gap-1 border border-green-200">
@@ -191,7 +182,7 @@ export default function PortfolioUltra() {
                 <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg flex-1 flex flex-col justify-center">
                   <div className="flex justify-between mb-4">
                     <p className="text-xs font-semibold uppercase text-gray-500">Exposure Map</p>
-                    <button className="text-xs font-semibold text-emerald-500 hover:text-emerald-400 transition">Details →</button>
+                    <Link to={user?._id ? `/Analytics/${user._id}` : '/Login'} className="text-xs font-semibold text-emerald-500 hover:text-emerald-400 transition">Details →</Link>
                   </div>
                   <div className="space-y-6">
                     <div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { useTradingAccount } from '../hooks/useTradingAccount';
@@ -22,7 +22,6 @@ const mockPositions = [
 const mockOrders = new Array(1842).fill({ status: 'COMPLETE' });
 
 export default function Analytics() {
-  const [isDark, setIsDark] = useState(false); // Defaulting to light mode for the "light" feel
   const [timeframe, setTimeframe] = useState('YTD');
   
   const user = useSelector(state => state.auth.user);
@@ -94,7 +93,7 @@ export default function Analytics() {
 
   return (
     // FIXED: Added h-screen and flex to create the side-by-side layout
-    <div className={`h-screen ${isDark ? 'dark' : ''} bg-slate-50 dark:bg-[#0A0A0A] text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans selection:bg-blue-500/20 relative flex overflow-hidden`}>
+    <div className="relative flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900 transition-colors duration-300 selection:bg-blue-500/20 dark:bg-[#0A0A0A] dark:text-slate-100 md:h-screen md:flex-row md:overflow-hidden">
       
       {/* --- SUBTLE BACKGROUND AMBIENCE --- */}
       <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-slate-200/50 to-transparent dark:from-white/[0.02] pointer-events-none -z-10" />
@@ -104,8 +103,8 @@ export default function Analytics() {
 
       {/* --- MAIN CONTENT AREA --- */}
       {/* FIXED: Main acts as a flex-1 column with independent scrolling */}
-      <main className="flex-1 relative z-10 py-15 overflow-y-auto w-full">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-10">
+      <main className="relative z-10 w-full flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 md:px-10 md:py-10">
           <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
             
             {/* HEADER & TIMEFRAME */}

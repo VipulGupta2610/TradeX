@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import ThemeToggle from './ThemeToggle';
 
 export default function ApiDashboard() {
   const [keys, setKeys] = useState(() => {
@@ -21,7 +22,8 @@ export default function ApiDashboard() {
   const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-cyan-500/30 relative overflow-hidden">
+    <div className="themeable-page min-h-screen bg-[#020202] text-white font-sans selection:bg-cyan-500/30 relative overflow-hidden">
+      <div className="absolute right-4 top-4 z-30 sm:right-8 sm:top-8"><ThemeToggle /></div>
       
       {/* BACKGROUND: Data Stream Matrix */}
       <div className="absolute inset-0 z-0 pointer-events-none fixed">
@@ -34,7 +36,7 @@ export default function ApiDashboard() {
       <main className="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12 py-24">
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
           
-          <div className="flex justify-between items-end mb-8">
+          <div className="mb-8 flex flex-col justify-between gap-6 pr-12 sm:flex-row sm:items-end">
             <motion.div variants={item}>
               <h2 className="text-sm font-bold text-cyan-500 uppercase tracking-widest mb-2 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" /> Developer Console

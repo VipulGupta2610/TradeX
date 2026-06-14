@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const NAV_LINKS = ["Product", "Developers", "Enterprise", "Pricing", "Blog"];
 
@@ -170,6 +171,8 @@ export default function Home() {
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
+
+  const naviagte = useNavigate
 
   useEffect(() => {
     const interval = setInterval(() => {

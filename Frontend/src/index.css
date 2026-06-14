@@ -27,8 +27,41 @@ body,
 }
 
 body {
+  margin: 0;
   color: var(--surface-text);
   transition: background-color 300ms ease, color 300ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 html:not(.dark) .themeable-page {
@@ -84,4 +117,23 @@ html:not(.dark) .themeable-page .grad-text {
 
 html:not(.dark) .themeable-page input {
   color: var(--surface-text);
+}
+
+html:not(.dark) .themeable-page input,
+html:not(.dark) .themeable-page select,
+html:not(.dark) .themeable-page textarea {
+  background-color: var(--surface-panel-muted) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--surface-text) !important;
+}
+
+@media (max-width: 640px) {
+  .themeable-page main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
 }

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { deleteAccount, resetPaperAccount, updateProfile } from '../api/tradingApi';
 import { loginuser, logoutuser } from '../redux/authSlice';
+import ThemeToggle from './ThemeToggle';
 
 export default function AccountSettings() {
   const [activeTab, setActiveTab] = useState('Profile');
@@ -70,7 +71,8 @@ export default function AccountSettings() {
   const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-rose-500/30 relative overflow-hidden">
+    <div className="themeable-page min-h-screen bg-[#020202] text-white font-sans selection:bg-rose-500/30 relative overflow-hidden">
+      <div className="absolute right-4 top-4 z-30 sm:right-8 sm:top-8"><ThemeToggle /></div>
       
       {/* BACKGROUND: Identity Matrix */}
       <div className="absolute inset-0 z-0 pointer-events-none fixed">
@@ -97,7 +99,7 @@ export default function AccountSettings() {
         </div>
 
         {/* Right Content Area */}
-        <motion.div variants={container} initial="hidden" animate="show" className="flex-1 bg-[#0A0A0A]/80 backdrop-blur-3xl border border-white/[0.08] rounded-[40px] p-8 md:p-12 shadow-2xl">
+        <motion.div variants={container} initial="hidden" animate="show" className="flex-1  backdrop-blur-3xl border border-white/[0.08] rounded-[40px] p-8 md:p-12 shadow-2xl">
           
           {activeTab === 'Profile' && (
             <motion.div variants={item} className="space-y-8">

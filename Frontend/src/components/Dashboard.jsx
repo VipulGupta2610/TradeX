@@ -1,27 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { useTradingAccount } from '../hooks/useTradingAccount';
 import Sidebar from '../assets/Sidebar';
-
-// --- Mock Data ---
-const recentActivity = [
-  { id: 1, type: 'Buy', asset: 'BTC', pair: 'BTC/USD', amount: '0.245', price: '$64,230', status: 'Filled', time: '2m ago' },
-  { id: 2, type: 'Sell', asset: 'ETH', pair: 'ETH/USD', amount: '12.5', price: '$3,450', status: 'Filled', time: '1h ago' },
-  { id: 3, type: 'API', asset: 'Webhook', pair: 'POST /v1/orders', amount: '-', price: '-', status: 'Success', time: '3h ago' },
-  { id: 4, type: 'Buy', asset: 'SOL', pair: 'SOL/USD', amount: '145.0', price: '$145.20', status: 'Pending', time: '5h ago' },
-];
-
-const watchlist = [
-  { ticker: 'AAPL', price: '$189.43', change: '-0.85%', up: false },
-  { ticker: 'NVDA', price: '$875.20', change: '+4.12%', up: true },
-  { ticker: 'TSLA', price: '$175.34', change: '-2.10%', up: false },
-];
+import ThemeToggle from './ThemeToggle';
 
 export default function Dashboard() {
-  const [isDark, setIsDark] = useState(true);
-  const [activeTab, setActiveTab] = useState('Overview');
+  const activeTab = 'Overview';
 
 const selector = useSelector(state=>state.auth.user)
   const { orders, watchlist: savedWatchlist, quotes, metrics } = useTradingAccount(selector?._id);
@@ -44,15 +29,6 @@ const selector = useSelector(state=>state.auth.user)
     };
   });
 
-  // Toggle Tailwind Dark Mode
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
-
   // Framer Motion Variants
   const container = {
     hidden: { opacity: 0 },
@@ -64,16 +40,14 @@ const selector = useSelector(state=>state.auth.user)
   };
 
   return (
-    <div className="flex h-screen bg-[#FAFAFA] dark:bg-[#000000] text-black dark:text-white transition-colors duration-500 font-sans overflow-hidden selection:bg-emerald-500/30">
+    <div className="flex min-h-screen flex-col bg-[#FAFAFA] text-black transition-colors duration-500 selection:bg-emerald-500/30 dark:bg-[#000000] dark:text-white md:h-screen md:flex-row md:overflow-hidden">
       
       {/* Background Noise Texture */}
       <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.04] pointer-events-none mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
       {/* --- SIDEBAR --- */}
      {/* --- SIDEBAR --- */}
-      <aside className="w-64 border-r border-black/5 dark:border-white/5 bg-white/50 dark:bg-[#050505]/50 backdrop-blur-xl flex flex-col justify-between z-20 relative">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      </aside>
+      <Sidebar />
       {/* --- MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden">
         
@@ -89,18 +63,12 @@ const selector = useSelector(state=>state.auth.user)
             </div>
 
             {/* Theme Toggle */}
-            <button onClick={() => setIsDark(!isDark)} className="p-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors">
-              {isDark ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-              )}
-            </button>
+            <ThemeToggle />
           </div>
         </header>
 
         {/* Dashboard Content Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <motion.div variants={container} initial="hidden" animate="show" className="max-w-6xl mx-auto space-y-6">
             
             {/* --- TOP ROW BENTO GRID --- */}
@@ -159,9 +127,9 @@ const selector = useSelector(state=>state.auth.user)
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/10">
-                  <button className="w-full text-center text-sm font-bold text-black dark:text-white hover:opacity-70 transition-opacity">
+                  <Link to="/Subscription" className="block w-full text-center text-sm font-bold text-black dark:text-white hover:opacity-70 transition-opacity">
                     Upgrade Infrastructure →
-                  </button>
+                  </Link>
                 </div>
               </motion.div>
             </div>
@@ -173,7 +141,7 @@ const selector = useSelector(state=>state.auth.user)
               <motion.div variants={item} className="lg:col-span-2 bg-white dark:bg-[#0A0A0A] border border-black/10 dark:border-white/10 rounded-3xl p-8 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-bold text-lg">Execution Log</h3>
-                  <button className="text-xs font-bold text-zinc-500 hover:text-black dark:hover:text-white transition-colors">View All</button>
+                  <Link to="/OrderHistory" className="text-xs font-bold text-zinc-500 hover:text-black dark:hover:text-white transition-colors">View All</Link>
                 </div>
 
                 <div className="overflow-x-auto">
