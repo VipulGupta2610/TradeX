@@ -22,10 +22,18 @@ export default function AdminDashboard() {
   const [isDark, setIsDark] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
 
-  useEffect(async () => {
-    const res = await api.get("/admin/AdminDashboard")
-    console.log(res)
-  }, [])
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const res = await api.get("/admin/AdminDashboard");
+      console.log(res);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchData();
+}, []);
 
 
   useEffect(() => {
