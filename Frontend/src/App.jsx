@@ -22,6 +22,7 @@ import Subscription from './components/Subscription';
 import LearningCenter from './components/LearningCenter';
 import AccountSettings from './components/AccountSettings';
 import NotFound from './components/NotFound';
+import AdminDashboard from "./components/AdminDashboard";
 
 const router = createBrowserRouter([{
     path:"/",
@@ -82,6 +83,10 @@ const router = createBrowserRouter([{
       {
         path:"/Dashboard/:userid",
         element:<Dashboard/>
+      },
+      {
+        path:"/admin/AdminDashboard",
+        element:<AdminDashboard/>
       },
       {
         path:"/Login",
