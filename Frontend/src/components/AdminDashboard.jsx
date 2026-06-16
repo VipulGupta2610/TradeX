@@ -2,290 +2,536 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/axios';
 
-// --- Mock Admin Data ---
-const adminKpis = [
-  { label: 'Total Users', value: '124,592', trend: '+1,204 this week', color: 'text-white' },
-  { label: 'Active MRR', value: '$842.5K', trend: '+12.4% MoM', color: 'text-emerald-500' },
-  { label: 'API Load', value: '42K req/s', trend: 'Stable', color: 'text-cyan-400' },
-  { label: 'System Errors', value: '0.04%', trend: '-0.01% today', color: 'text-rose-500' },
+// ─── Mock Data for Static Sections ──────────────────────────────────────────────
+const yourSites = [
+  { name: 'UI KIT', url: 'www.uikit.to', visits: 189452201 },
+  { name: 'UI Design', url: 'www.uidesign.ro', visits: 906400025 },
+  { name: 'Bexon', url: 'www.bexon.agency', visits: 152824001 },
 ];
 
-const auditLogs = [
-  { id: 'LOG-9921', user: 'alex@capital.com', action: 'Upgraded to Enterprise', ip: '192.168.1.1', time: '2m ago', status: 'Success' },
-  { id: 'LOG-9920', user: 'system_core', action: 'Engine v2.4 Deployment', ip: 'internal', time: '14m ago', status: 'Success' },
-  { id: 'LOG-9919', user: 'unknown', action: 'Failed Admin Login', ip: '45.22.19.11', time: '1h ago', status: 'Warning' },
-  { id: 'LOG-9918', user: 'sarah@propfirm.io', action: 'Generated API Key', ip: '104.22.1.9', time: '3h ago', status: 'Success' },
-  { id: 'LOG-9917', user: 'risk_engine', action: 'Liquidated Account #4421', ip: 'internal', time: '5h ago', status: 'Critical' },
+const nodes = [
+  { name: 'US-East (Trade Engine)', load: 45, status: 'Healthy', color: '#10b981' },
+  { name: 'EU-Central (WebSockets)', load: 82, status: 'High Load', color: '#f59e0b' },
+  { name: 'AP-South (Database)', load: 32, status: 'Healthy', color: '#10b981' },
 ];
 
-export default function AdminDashboard() {
-  const [isDark, setIsDark] = useState(true);
-  const [activeTab, setActiveTab] = useState('Overview');
+const navItems = [
+  { label: 'Dashboard', icon: GridIcon },
+  { label: 'Analytics', icon: BarIcon },
+  { label: 'Sites', icon: SitesIcon },
+  { label: 'Explore Domain', icon: DomainIcon },
+  { label: 'Website Builder', icon: BuilderIcon },
+  { label: 'Manage Service', icon: ServiceIcon },
+  { label: 'Monitoring', icon: MonitorIcon },
+  { label: 'Activity Log', icon: LogIcon },
+];
 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const res = await api.get("/admin/AdminDashboard");
-      console.log(res);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+function GridIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" fill={color} /><rect x="14" y="3" width="7" height="7" rx="1.5" fill={color} /><rect x="3" y="14" width="7" height="7" rx="1.5" fill={color} /><rect x="14" y="14" width="7" height="7" rx="1.5" fill={color} /></svg>); }
+function BarIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="9" rx="1" fill={color} /><rect x="10" y="7" width="4" height="14" rx="1" fill={color} /><rect x="17" y="3" width="4" height="18" rx="1" fill={color} /></svg>); }
+function SitesIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><circle cx="12" cy="12" r="9" /><path d="M12 3C12 3 8 7 8 12s4 9 4 9M12 3c0 0 4 4 4 9s-4 9-4 9M3 12h18" /></svg>); }
+function DomainIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5L21 21" strokeLinecap="round" /></svg>); }
+function BuilderIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><rect x="3" y="3" width="18" height="14" rx="2" /><path d="M3 8h18M8 21h8M12 17v4" strokeLinecap="round" /></svg>); }
+function ServiceIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>); }
+function MonitorIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" strokeLinecap="round" strokeLinejoin="round" /></svg>); }
+function LogIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><path d="M9 12h6M9 16h4M7 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-2" strokeLinecap="round" /><rect x="7" y="2" width="10" height="4" rx="1" /></svg>); }
+function BellIcon() { return (<svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" strokeLinecap="round" /></svg>); }
+function SearchIcon() { return (<svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5L21 21" strokeLinecap="round" /></svg>); }
 
-  fetchData();
-}, []);
+// ─── Chart Helpers ─────────────────────────────────────────────────────────────
+function polylineFromData(data, width, height, padding = 8) {
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  return data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - padding - ((v - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+}
 
+function areaFromData(data, width, height, padding = 8) {
+  const pts = polylineFromData(data, width, height, padding);
+  return `M0,${height} L${pts.split(' ').map(p => p).join(' L')} L${width},${height} Z`;
+}
 
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
-
-  // Framer Motion Variants
-  const container = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-  };
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
-  };
+function AreaChart({ data, width = 400, height = 160, color = '#6366f1' }) {
+  const pts = polylineFromData(data, width, height);
+  const area = areaFromData(data, width, height);
+  const max = Math.max(...data);
+  const hiIdx = data.indexOf(max);
+  const hiX = (hiIdx / (data.length - 1)) * width;
+  const minV = Math.min(...data), maxV = max, range = maxV - minV || 1;
+  const hiY = height - 8 - ((max - minV) / range) * (height - 16);
+  const gradId = `ag${color.replace('#', '')}`;
 
   return (
-    <div className="flex h-screen bg-[#FAFAFA] dark:bg-[#020202] text-black dark:text-white transition-colors duration-500 font-sans overflow-hidden selection:bg-rose-500/30">
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ transition: 'all 0.3s ease' }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradId})`} style={{ transition: 'd 0.5s ease' }} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" style={{ transition: 'points 0.5s ease' }} />
+      <line x1={hiX} y1={0} x2={hiX} y2={height} stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="3 3" style={{ transition: 'all 0.5s ease' }} />
+      <circle cx={hiX} cy={hiY} r="4" fill={color} style={{ transition: 'all 0.5s ease' }} />
+      <rect x={hiX - 36} y={hiY - 30} width={72} height={22} rx="5" fill="#1e2235" style={{ transition: 'all 0.5s ease' }} />
+      <text x={hiX} y={hiY - 14} textAnchor="middle" fill="white" fontSize="10" fontWeight="600" style={{ transition: 'all 0.5s ease' }}>{(max / 10).toFixed(1)} GB</text>
+      <text x={hiX} y={hiY - 3} textAnchor="middle" fill="#10b981" fontSize="9" style={{ transition: 'all 0.5s ease' }}>Live Data</text>
+    </svg>
+  );
+}
 
-      {/* --- ROOT ACCESS BACKGROUND --- */}
-      <div className="absolute inset-0 z-0 pointer-events-none fixed bg-[#020202]">
-        {/* Elevated Privilege Gradients (Crimson & Indigo) */}
-        <motion.div
-          animate={{ x: [-20, 20, -20], opacity: [0.1, 0.15, 0.1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-[-10%] left-[-5%] w-[50vw] h-[50vw] max-w-[800px] max-h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(225,29,72,0.08),transparent_60%)] blur-[100px]"
-        />
-        <motion.div
-          animate={{ x: [20, -20, 20], opacity: [0.05, 0.1, 0.05] }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[-10%] right-[-5%] w-[60vw] h-[60vw] max-w-[900px] max-h-[900px] bg-[radial-gradient(ellipse_at_center,rgba(79,70,229,0.08),transparent_60%)] blur-[120px]"
-        />
+function LineChart({ data, width = 260, height = 100, color = '#fff' }) {
+  const pts = polylineFromData(data, width, height);
+  const area = areaFromData(data, width, height);
+  const gradId = `lg${Math.random().toString(36).slice(2, 6)}`;
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradId})`} style={{ transition: 'd 0.5s ease' }} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" style={{ transition: 'points 0.5s ease' }} />
+    </svg>
+  );
+}
 
-        {/* Fine Grain Tactile Noise */}
-        <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+function BarChart({ data, width = 260, height = 100, color = '#f59e0b', highlightColor = '#fff' }) {
+  const max = Math.max(...data);
+  const barW = (width / data.length) * 0.55;
+  const gap = width / data.length;
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      {data.map((v, i) => {
+        const bh = (v / max) * (height - 8);
+        const x = i * gap + (gap - barW) / 2;
+        const isHi = i === data.length - 1; // Highlight the most recent data point
+        return (
+          <rect
+            key={i}
+            x={x} y={height - bh - 2}
+            width={barW} height={bh}
+            rx="2"
+            fill={isHi ? highlightColor : color}
+            opacity={isHi ? 1 : 0.7}
+            style={{ transition: 'all 0.5s ease' }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
 
-        {/* Deep Data Grid */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:linear-gradient(to_bottom,black_10%,transparent_100%)]" />
-      </div>
+function DonutChart({ used, total, color = '#6366f1', size = 100, stroke = 14 }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const frac = used / total;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${Math.max(0, frac) * circ} ${circ}`}
+        strokeDashoffset={circ * 0.25}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 0.5s ease' }}
+      />
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        fill="none" stroke="#10b981" strokeWidth={stroke}
+        strokeDasharray={`${Math.max(0, frac) * circ * 0.18} ${circ}`}
+        strokeDashoffset={circ * 0.25 - Math.max(0, frac) * circ * 0.82}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 0.5s ease, stroke-dasharray 0.5s ease' }}
+      />
+    </svg>
+  );
+}
 
-      {/* --- SIDEBAR --- */}
-      <aside className="w-64 border-r border-white/[0.05] bg-[#050505]/80 backdrop-blur-2xl flex flex-col justify-between z-20 relative hidden md:flex">
-        <div>
-          <div className="h-20 flex items-center px-8 border-b border-white/[0.05]">
-            <div className="w-8 h-8 bg-rose-500 text-white flex items-center justify-center rounded-lg font-black text-xs mr-3 shadow-[0_0_15px_rgba(225,29,72,0.4)]">
-              TX
-            </div>
-            <span className="font-bold tracking-[0.2em] text-sm text-white">ADMIN</span>
-          </div>
+// ─── Main Component ────────────────────────────────────────────────────────────
+export default function AdminDashboard() {
+  const [activeNav, setActiveNav] = useState('Dashboard');
+  const [apiData, setApiData] = useState({
+    totalUsers: 0,
+    totalOrders: 0,
+    todayOrdersCount: 0,
+    todayOrders: []
+  });
 
-          <div className="p-4 space-y-1 mt-4">
-            <p className="px-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Platform</p>
-            {['Overview', 'Users', 'Subscriptions', 'Financials'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`w-full flex items-center px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-zinc-500 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                {tab}
-              </button>
-            ))}
+  // Dynamic Chart State
+  const [chartData, setChartData] = useState({
+    cdn: [18, 25, 22, 35, 30, 45, 76, 55, 48, 60, 52, 58, 50, 65, 55, 70, 62, 58, 72, 68, 60, 75, 65, 70, 65, 72, 68, 75],
+    transfer: [12, 18, 14, 22, 19, 28, 24, 30, 26, 20, 32, 28, 36, 31, 27, 38, 33, 29, 42, 36, 31, 45, 39, 34, 48, 42, 37, 50],
+    visits: [320, 410, 380, 520, 460, 610, 580, 720, 680, 540, 760, 720, 880, 810, 730, 920, 870, 800, 980, 930, 860, 1040, 980, 910, 1100, 1042, 970, 1200],
+    resourceUsage: 72
+  });
 
-            <p className="px-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-8 mb-2">Infrastructure</p>
-            {['System Health', 'API Logs', 'Risk Engine'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`w-full flex items-center px-4 py-2.5 rounded-xl text-sm font-bold transition-all text-zinc-500 hover:text-white hover:bg-white/5`}
-              >
-                {tab}
-              </button>
-            ))}
+  // Fetch API Data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await api.get('/admin/AdminDashboard');
+        if (res.data) setApiData(res.data);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Simulate Real-time Dynamic Chart Data Updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setChartData(prev => {
+        // Generate sensible fluctuations based on the last value
+        const nextCdn = Math.max(20, Math.min(100, prev.cdn[prev.cdn.length - 1] + (Math.random() * 14 - 7)));
+        const nextTransfer = Math.max(10, Math.min(80, prev.transfer[prev.transfer.length - 1] + (Math.random() * 10 - 5)));
+        const nextVisits = Math.max(500, Math.min(1500, prev.visits[prev.visits.length - 1] + (Math.random() * 120 - 60)));
+        const nextResource = Math.max(40, Math.min(95, prev.resourceUsage + (Math.random() * 6 - 3)));
+
+        return {
+          cdn: [...prev.cdn.slice(1), nextCdn],           // Shift array left, append new value
+          transfer: [...prev.transfer.slice(1), nextTransfer],
+          visits: [...prev.visits.slice(1), nextVisits],
+          resourceUsage: nextResource
+        };
+      });
+    }, 2500); // Update every 2.5 seconds to simulate live server flow
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Compute dynamic KPIs based on API state
+  const dynamicKpis = [
+    { label: 'Total Users', value: apiData.totalUsers.toLocaleString(), trend: 'Active Accounts', up: true },
+    { label: 'Total Orders', value: apiData.totalOrders.toLocaleString(), trend: 'Lifetime Volume', up: true },
+    { label: 'Orders Today', value: apiData.todayOrdersCount.toLocaleString(), trend: '24h Volume', up: true },
+    { label: 'System Health', value: '99.9%', trend: 'Stable', up: null },
+  ];
+
+  return (
+    <div style={{
+      display: 'flex',
+      height: '100vh',
+      background: '#111827',
+      color: '#e5e7eb',
+      fontFamily: "'Inter', 'SF Pro Display', sans-serif",
+      overflow: 'hidden',
+    }}>
+
+      {/* ── SIDEBAR ── */}
+      <aside style={{
+        width: 200,
+        background: '#0f1623',
+        borderRight: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+        zIndex: 10,
+      }}>
+        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: 'linear-gradient(135deg,#6366f1,#818cf8)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 800, color: 'white',
+            }}>W4</div>
+            <span style={{ fontWeight: 700, fontSize: 15, color: 'white', letterSpacing: 0.3 }}>Web4</span>
           </div>
         </div>
 
-        {/* Admin Profile Footer */}
-        <div className="p-4 border-t border-white/[0.05]">
-          <div className="flex items-center gap-3 px-4 py-3 bg-rose-500/10 border border-rose-500/20 rounded-xl cursor-pointer hover:bg-rose-500/20 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-rose-500 flex items-center justify-center text-white font-bold text-xs shadow-inner">
-              ROOT
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate text-rose-500">Superadmin</p>
-              <p className="text-[10px] text-rose-400/60 font-mono truncate">ID: 0000-1</p>
+        <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
+          {navItems.map(({ label, icon: Icon }) => {
+            const active = activeNav === label;
+            return (
+              <button
+                key={label}
+                onClick={() => setActiveNav(label)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderRadius: 8, border: 'none',
+                  background: active ? 'rgba(99,102,241,0.15)' : 'transparent',
+                  color: active ? '#818cf8' : '#6b7280',
+                  fontSize: 13, fontWeight: active ? 600 : 500,
+                  cursor: 'pointer', marginBottom: 2,
+                  transition: 'all 0.15s',
+                  textAlign: 'left',
+                  borderLeft: active ? '2px solid #6366f1' : '2px solid transparent',
+                }}
+              >
+                <Icon size={15} color={active ? '#818cf8' : '#6b7280'} />
+                {label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div style={{ padding: '12px 12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#6366f1,#10b981)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 800, color: 'white', flexShrink: 0,
+            }}>A</div>
+            <div style={{ overflow: 'hidden' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: 'white', margin: 0, lineHeight: 1.3 }}>Superadmin</p>
+              <p style={{ fontSize: 10, color: '#4b5563', margin: 0, fontFamily: 'monospace' }}>ID: 0000-1</p>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT AREA --- */}
-      <main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden">
-
-        {/* Top Header */}
-        <header className="h-20 border-b border-white/[0.05] flex items-center justify-between px-8 bg-[#050505]/40 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold tracking-tight">{activeTab}</h1>
-            <span className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500 text-[10px] font-bold border border-emerald-500/20 tracking-widest uppercase">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> All Systems Nominal
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative hidden md:block w-64">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input type="text" placeholder="Search users, TXIDs..." className="w-full bg-black/40 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-rose-500/50 transition-colors" />
-            </div>
-            <button className="w-9 h-9 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors relative">
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-rose-500" />
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+      {/* ── MAIN ── */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <header style={{
+          height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: '#0f1623', flexShrink: 0,
+        }}>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: 'white', margin: 0 }}>Dashboard</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: 4 }}>
+              <SearchIcon />
             </button>
+            <button style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: 4 }}>
+              <BellIcon />
+            </button>
+            <div style={{
+              width: 30, height: 30, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#6366f1,#10b981)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 800, color: 'white', cursor: 'pointer',
+            }}>A</div>
           </div>
         </header>
 
-        {/* Dashboard Content */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-10 scrollbar-hide">
-          <motion.div variants={container} initial="hidden" animate="show" className="max-w-[1600px] mx-auto space-y-8">
+        {/* Content */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* KPI ROW */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-              {adminKpis.map((kpi, idx) => (
-                <motion.div key={idx} variants={item} className="bg-white/5 backdrop-blur-3xl border border-white/[0.08] rounded-[24px] p-6 shadow-xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">{kpi.label}</p>
-                  <h3 className={`text-4xl font-black font-mono tracking-tight ${kpi.color}`}>{kpi.value}</h3>
-                  <p className="text-xs text-zinc-400 font-medium mt-3">{kpi.trend}</p>
-                </motion.div>
+          {/* ── TOP ROW: CDN Chart + Your Sites ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16 }}>
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Live Bandwidth</p>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }}></span>
+                  </div>
+                  <p style={{ fontSize: 11, color: '#374151', margin: 0 }}>Streaming</p>
+                </div>
+                <span style={{ fontSize: 22, fontWeight: 800, color: 'white' }}>{(chartData.cdn[chartData.cdn.length - 1] / 10).toFixed(2)} GB/s</span>
+              </div>
+              <div style={{ display: 'flex', gap: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingBottom: 18, paddingRight: 8, fontSize: 10, color: '#374151', textAlign: 'right', minWidth: 34 }}>
+                  {['10GB', '7.5GB', '5GB', '2.5GB', '0GB'].map(l => <span key={l}>{l}</span>)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <AreaChart data={chartData.cdn} width={520} height={140} color="#6366f1" />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#374151', marginTop: 4 }}>
+                    {['-60s', '-45s', '-30s', '-15s', 'Now'].map(l => <span key={l}>{l}</span>)}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Your Sites</span>
+                <span style={{ fontSize: 11, color: '#6366f1', cursor: 'pointer' }}>View all</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Name</span>
+                <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Visit</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {yourSites.map((site) => (
+                  <div key={site.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: 'white', margin: 0 }}>{site.name}</p>
+                      <p style={{ fontSize: 11, color: '#4b5563', margin: 0 }}>{site.url}</p>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', fontVariantNumeric: 'tabular-nums' }}>
+                      {site.visits.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* ── MIDDLE ROW: Data Transfer + Unique Visits + Resource Usage ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 260px', gap: 16 }}>
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div>
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>API Requests</p>
+                  <p style={{ fontSize: 11, color: '#374151', margin: 0 }}>Requests/sec</p>
+                </div>
+                <span style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{Math.round(chartData.transfer[chartData.transfer.length - 1])}k</span>
+              </div>
+              <LineChart data={chartData.transfer.slice(-14)} width={260} height={88} color="#e5e7eb" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#374151', marginTop: 4 }}>
+                {['-30s', '-25s', '-20s', '-15s', '-10s', '-5s', 'Now'].map(l => <span key={l}>{l}</span>)}
+              </div>
+            </Card>
+
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div>
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Active Users</p>
+                  <p style={{ fontSize: 11, color: '#374151', margin: 0 }}>Current Online</p>
+                </div>
+                <span style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{Math.round(chartData.visits[chartData.visits.length - 1])}</span>
+              </div>
+              <BarChart data={chartData.visits.slice(-14)} width={260} height={88} color="#4b5563" highlightColor="#f59e0b" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#374151', marginTop: 4 }}>
+                {['-30s', '-25s', '-20s', '-15s', '-10s', '-5s', 'Now'].map(l => <span key={l}>{l}</span>)}
+              </div>
+            </Card>
+
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Server Load</span>
+                <span style={{ fontSize: 11, color: '#4b5563' }}>Real-time</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+                {/* Dynamically passing the generated resourceUsage stat */}
+                <DonutChart used={chartData.resourceUsage} total={100} color="#6366f1" size={96} stroke={13} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'CPU Usage', val: `${chartData.resourceUsage.toFixed(1)}%`, color: '#6366f1' },
+                  { label: 'Memory', val: `${(chartData.resourceUsage / 15).toFixed(1)} GB / 8 GB`, color: '#10b981' },
+                ].map(({ label, val, color }) => (
+                  <div key={label} style={{
+                    background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+                    padding: '8px 10px', borderLeft: `2px solid ${color}`,
+                  }}>
+                    <p style={{ fontSize: 10, color: '#4b5563', margin: 0, fontWeight: 600 }}>{label}</p>
+                    <p style={{ fontSize: 10, color: '#9ca3af', margin: 0, marginTop: 2, lineHeight: 1.3 }}>{val}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* ── BOTTOM ROW: Dynamic KPIs + Node Health + Today's Orders ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+            {dynamicKpis.map((kpi, i) => (
+              <Card key={i} style={{ padding: '14px 16px' }}>
+                <p style={{ fontSize: 10, color: '#4b5563', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{kpi.label}</p>
+                <p style={{ fontSize: 22, fontWeight: 800, color: 'white', margin: '6px 0 4px', fontVariantNumeric: 'tabular-nums' }}>{kpi.value}</p>
+                <p style={{ fontSize: 11, color: kpi.up === true ? '#10b981' : kpi.up === false ? '#f87171' : '#6b7280', margin: 0 }}>{kpi.trend}</p>
+              </Card>
+            ))}
+          </div>
+
+          <Card style={{ padding: '16px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Node Infrastructure</span>
+              <button style={{ fontSize: 11, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, color: '#9ca3af', padding: '4px 12px', cursor: 'pointer' }}>Manage Fleet</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+              {nodes.map((n, i) => (
+                <div key={i}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#d1d5db' }}>{n.name}</span>
+                    <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#6b7280' }}>{n.load}%</span>
+                  </div>
+                  <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+                    <motion.div
+                      initial={{ width: 0 }} animate={{ width: `${n.load}%` }}
+                      transition={{ duration: 1 }}
+                      style={{ height: '100%', borderRadius: 99, background: n.color }}
+                    />
+                  </div>
+                  <p style={{ fontSize: 10, color: '#4b5563', margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: 1 }}>{n.status}</p>
+                </div>
               ))}
             </div>
+          </Card>
 
-            {/* CHARTS & HEALTH ROW */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-
-              {/* Revenue Chart */}
-              <motion.div variants={item} className="xl:col-span-8 bg-white/5 backdrop-blur-3xl border border-white/[0.08] rounded-[32px] p-8 shadow-xl flex flex-col relative overflow-hidden">
-                <div className="flex justify-between items-start mb-8 z-10">
-                  <div>
-                    <h3 className="text-lg font-bold tracking-tight">Revenue Growth</h3>
-                    <p className="text-sm text-zinc-500">Monthly Recurring Revenue (MRR) - Trailing 6 Months</p>
-                  </div>
-                  <button className="px-4 py-2 bg-white/5 rounded-lg text-xs font-bold hover:bg-white/10 transition-colors">Export Report</button>
-                </div>
-
-                {/* SVG Bar Chart Simulation */}
-                <div className="flex-1 w-full flex items-end justify-between gap-4 mt-8 z-10 h-[250px]">
-                  {[40, 55, 45, 70, 85, 100].map((height, i) => (
-                    <div key={i} className="w-full flex flex-col items-center gap-3">
-                      <motion.div
-                        initial={{ height: 0 }} animate={{ height: `${height}%` }} transition={{ duration: 1, delay: i * 0.1 }}
-                        className="w-full bg-gradient-to-t from-emerald-500/20 to-emerald-400 rounded-t-lg relative group"
-                      >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-2 py-1 rounded text-xs font-mono border border-white/10">
-                          ${(height * 8.4).toFixed(1)}K
-                        </div>
-                      </motion.div>
-                      <span className="text-xs text-zinc-500 font-mono tracking-widest">M{i + 1}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* System Health / Server Nodes */}
-              <motion.div variants={item} className="xl:col-span-4 bg-white/5 backdrop-blur-3xl border border-white/[0.08] rounded-[32px] p-8 shadow-xl flex flex-col">
-                <h3 className="text-lg font-bold tracking-tight mb-8">Node Infrastructure</h3>
-                <div className="space-y-6 flex-1">
-                  {[
-                    { name: 'US-East (Trade Engine)', load: 45, status: 'Healthy', color: 'bg-emerald-500' },
-                    { name: 'EU-Central (WebSockets)', load: 82, status: 'High Load', color: 'bg-amber-500' },
-                    { name: 'AP-South (Database)', load: 32, status: 'Healthy', color: 'bg-emerald-500' },
-                  ].map((node, i) => (
-                    <div key={i} className="group">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-bold text-zinc-300">{node.name}</span>
-                        <span className="text-xs font-mono text-zinc-500">{node.load}%</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mb-1">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${node.load}%` }} transition={{ duration: 1, delay: 0.2 }} className={`h-full ${node.color} rounded-full`} />
-                      </div>
-                      <p className="text-[9px] uppercase tracking-widest text-zinc-500 text-right">{node.status}</p>
-                    </div>
-                  ))}
-                </div>
-                <button className="w-full py-3 mt-6 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/10 transition-colors">Manage Fleet</button>
-              </motion.div>
+          {/* Today's Orders from API */}
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Today's Orders</span>
+              <span style={{ fontSize: 11, color: '#6b7280', cursor: 'pointer' }}>View All Orders →</span>
             </div>
-
-            {/* AUDIT LOG TABLE */}
-            <motion.div variants={item} className="bg-white/5 backdrop-blur-3xl border border-white/[0.08] rounded-[32px] shadow-xl overflow-hidden">
-              <div className="p-6 md:p-8 border-b border-white/[0.05] flex justify-between items-center">
-                <h3 className="text-lg font-bold tracking-tight">Global Audit Log</h3>
-                <button className="text-xs font-bold text-zinc-500 hover:text-white transition-colors">View All Logs →</button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[900px]">
-                  <thead>
-                    <tr className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-white/[0.05] bg-black/20">
-                      <th className="py-4 pl-8 font-medium">Log ID / Time</th>
-                      <th className="py-4 font-medium">User / System</th>
-                      <th className="py-4 font-medium">Action Event</th>
-                      <th className="py-4 font-medium font-mono text-right">IP Origin</th>
-                      <th className="py-4 pr-8 font-medium text-right">Severity</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm">
-                    <AnimatePresence>
-                      {auditLogs.map((log, index) => (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700, fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+                    {['Order ID', 'User ID', 'Symbol', 'Name', 'Exchange'].map(h => (
+                      <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 10, color: '#4b5563', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence>
+                    {apiData.todayOrders.length > 0 ? (
+                      apiData.todayOrders.map((order, idx) => (
                         <motion.tr
-                          key={log.id}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.05 * index }}
-                          className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                          key={order._id}
+                          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.05 * idx }}
+                          style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
-                          <td className="py-5 pl-8">
-                            <p className="font-mono font-bold text-xs text-zinc-300">{log.id}</p>
-                            <p className="text-[10px] text-zinc-500">{log.time}</p>
-                          </td>
-                          <td className="py-5 font-medium text-zinc-300">
-                            {log.user}
-                          </td>
-                          <td className="py-5 font-bold text-white">
-                            {log.action}
-                          </td>
-                          <td className="py-5 text-right font-mono text-xs text-zinc-500">
-                            {log.ip}
-                          </td>
-                          <td className="py-5 pr-8 text-right">
-                            <span className={`inline-block px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${log.status === 'Critical' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                                log.status === 'Warning' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                  'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                              }`}>
-                              {log.status}
-                            </span>
+                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#d1d5db' }}>{order._id}</td>
+                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{order.userid}</td>
+                          <td style={{ padding: '12px 16px', fontWeight: 700, color: 'white' }}>{order.symbol}</td>
+                          <td style={{ padding: '12px 16px', color: '#9ca3af' }}>{order.name}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{
+                              display: 'inline-block', padding: '3px 8px', borderRadius: 5,
+                              fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
+                              background: 'rgba(99,102,241,0.1)',
+                              color: '#818cf8',
+                              border: '1px solid rgba(99,102,241,0.2)',
+                            }}>{order.exchange}</span>
                           </td>
                         </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                          No orders processed today yet.
+                        </td>
+                      </tr>
+                    )}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
-          </motion.div>
         </div>
       </main>
+    </div>
+  );
+}
+
+// ─── Reusable Card ─────────────────────────────────────────────────────────────
+function Card({ children, style = {} }) {
+  return (
+    <div style={{
+      background: '#0f1623',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 14,
+      padding: '16px 18px',
+      ...style,
+    }}>
+      {children}
     </div>
   );
 }

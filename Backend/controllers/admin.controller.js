@@ -1,13 +1,41 @@
-import User from "../schemas/user.schema.js"
+import User from "../schemas/user.schema.js";
+import Order from "../schemas/orders.schema.js";
 
-export const Number_of_users= async (req,res)=>{
+export const Number_of_users = async (req, res) => {
     try {
-        const totalUsers =await User.countDocuments();
-        // console.log(totalUsers)
-        res.status(200).json({message:totalUsers});
+        const totalUsers = await User.countDocuments();
+        const totalOrders = await Order.countDocuments();
+
+        // Today's date range
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const todayOrders = await Order.find({
+            createdAt: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        }).sort({ createdAt: -1 });
+
+        const todayOrdersCount = todayOrders.length;
+
+        res.status(200).json({
+            totalUsers,
+            totalOrders,
+            todayOrdersCount,
+            todayOrders
+        });
+
     } catch (error) {
-        console.log("Error at admin")
-        console.log(error)
-        res.status(500).json({message:"Internal server error",error})
+        console.log("Error at admin");
+        console.log(error);
+
+        res.status(500).json({
+            message: "Internal server error",
+            error
+        });
     }
-}
+};

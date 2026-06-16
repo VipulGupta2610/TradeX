@@ -18,13 +18,13 @@ function Sidebar() {
     ['TradingTerminal', '/TradingTerminal'],
     ['Order History', '/OrderHistory'],
     ['Trade History', '/TradeHistory'],
-    ['Trade Journal', '/TradeJournal'],
-    ['Market Explorer', '/MarketExplorer'],
-    ['Leaderboard', '/Leaderboard'],
-    ['Challenges', '/Challenges'],
-    ['AI Coach', '/AICoach'],
-    ['Learning Center', '/LearningCenter'],
-    ['Subscription', '/Subscription'],
+    // ['Trade Journal', '/TradeJournal'],
+    // ['Market Explorer', '/MarketExplorer'],
+    // ['Leaderboard', '/Leaderboard'],
+    // ['Challenges', '/Challenges'],
+    // ['AI Coach', '/AICoach'],
+    // ['Learning Center', '/LearningCenter'],
+    // ['Subscription', '/Subscription'],
   ];
 
   return (
@@ -60,7 +60,7 @@ function Sidebar() {
               className={`flex w-full items-center rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-black/5 text-black dark:bg-white/10 dark:text-white'
-                  : 'text-zinc-500 hover:bg-black/[0.02] hover:text-black dark:hover:bg-white/[0.02] dark:hover:text-white'
+                  : 'text-zinc-300 hover:bg-black/[0.02] hover:text-black dark:hover:bg-white/[0.02] dark:hover:text-white'
               }`}
             >
               {label}
@@ -78,7 +78,7 @@ function Sidebar() {
             key={label}
             to={path}
             onClick={() => setIsOpen(false)}
-            className="flex w-full items-center rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-500 transition-all hover:bg-black/[0.02] hover:text-black dark:hover:bg-white/[0.02] dark:hover:text-white"
+            className="flex w-full items-center rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-300 transition-all hover:bg-black/[0.02] hover:text-black dark:hover:bg-white/[0.02] dark:hover:text-white"
           >
             {label}
           </Link>

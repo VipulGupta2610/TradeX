@@ -2605,4 +2605,3 @@ Provide concise, actionable analysis. Use bullet points and bold for key levels.
       </div>
     </div>
   );
-}
