@@ -2,6 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/axios';
 
+// ─── Helper Functions ────────────────────────────────────────────────────────
+const formatDate = (isoString) => {
+  if (!isoString) return 'Recently'; // Fallback for older DB entries without timestamps
+  const date = new Date(isoString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
+function polylineFromData(data, width, height, padding = 8) {
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  return data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - padding - ((v - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+}
+
+function areaFromData(data, width, height, padding = 8) {
+  const pts = polylineFromData(data, width, height, padding);
+  return `M0,${height} L${pts.split(' ').map(p => p).join(' L')} L${width},${height} Z`;
+}
+
 // ─── Mock Data for Static Sections ──────────────────────────────────────────────
 const yourSites = [
   { name: 'UI KIT', url: 'www.uikit.to', visits: 189452201 },
@@ -40,23 +68,7 @@ function LogIcon({ size = 16, color = 'currentColor' }) { return (<svg width={si
 function BellIcon() { return (<svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" strokeLinecap="round" /></svg>); }
 function SearchIcon() { return (<svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5L21 21" strokeLinecap="round" /></svg>); }
 
-// ─── Chart Helpers ─────────────────────────────────────────────────────────────
-function polylineFromData(data, width, height, padding = 8) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  return data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - padding - ((v - min) / range) * (height - padding * 2);
-    return `${x},${y}`;
-  }).join(' ');
-}
-
-function areaFromData(data, width, height, padding = 8) {
-  const pts = polylineFromData(data, width, height, padding);
-  return `M0,${height} L${pts.split(' ').map(p => p).join(' L')} L${width},${height} Z`;
-}
-
+// ─── Chart Components ────────────────────────────────────────────────────────
 function AreaChart({ data, width = 400, height = 160, color = '#6366f1' }) {
   const pts = polylineFromData(data, width, height);
   const area = areaFromData(data, width, height);
@@ -160,7 +172,7 @@ function DonutChart({ used, total, color = '#6366f1', size = 100, stroke = 14 })
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState('Dashboard');
-  const [bugReports, setBugReports] = useState([]); // NEW dynamic state
+  const [bugReports, setBugReports] = useState([]); 
   const [apiData, setApiData] = useState({
     totalUsers: 0,
     totalOrders: 0,
@@ -178,7 +190,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both concurrently
         const [dashboardRes, bugsRes] = await Promise.all([
           api.get('/admin/AdminDashboard'),
           api.get('/admin/AdminDashboard/bugs')
@@ -233,14 +244,12 @@ export default function AdminDashboard() {
       {/* ── GLOBAL STYLE INJECTION TO HIDE SCROLLBARS ── */}
       <style>
         {`
-          /* Hide scrollbar for Chrome, Safari and Opera */
           ::-webkit-scrollbar {
             display: none;
           }
-          /* Hide scrollbar for IE, Edge and Firefox */
           * {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
           }
         `}
       </style>
@@ -547,7 +556,6 @@ export default function AdminDashboard() {
                     <div key={bug._id} style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#e5e7eb', fontFamily: 'monospace' }}>
-                          {/* Truncate the long MongoDB ObjectId to make it look cleaner like ERR-XXXX */}
                           {bug._id.slice(-6).toUpperCase()}
                         </span>
                         <span style={{
@@ -561,8 +569,12 @@ export default function AdminDashboard() {
                       <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, lineHeight: 1.4 }}>
                         <strong style={{ color: '#d1d5db' }}>{bug.title}</strong>: {bug.description}
                       </p>
+                      
+                      {/* UPDATED: Displays formatted createdAt date or fallback text */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                        <span style={{ fontSize: 10, color: '#6b7280' }}>{bug.category} • {bug.userName}</span>
+                        <span style={{ fontSize: 10, color: '#6b7280' }}>
+                           {bug.category} • {formatDate(bug.createdAt)}
+                        </span>
                         <span style={{ fontSize: 10, color: '#f59e0b' }}>Open</span>
                       </div>
                     </div>

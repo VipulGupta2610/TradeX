@@ -43,7 +43,7 @@ export const Number_of_users = async (req, res) => {
 
 export const fetch_bugs = async (req , res)=>{
     try {
-        const bug = await bugs.find()
+        const bug = await bugs.find().sort({updatedAt:-1})
         console.log("Bugs fetched")
       return  res.status(200).json(bug)
 

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import Sidebar from '../assets/Sidebar';
 import { useSelector } from 'react-redux';
 import { api } from '../api/axios';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function BugReport() {
   const [isDark, setIsDark] = useState(true);
@@ -40,6 +40,8 @@ const selector = useSelector(state=>state?.auth?.user);
         console.log(res)
         toast.success("Bug reported")
         setIsSubmitting(false)
+    setFormState({userName:selector?.name,  userEmail:selector?.email, title: '', category: 'Execution Engine', severity: 'Medium', description: '' });
+      // Trigger success toast here
     } catch (error) {
         console.log("Error at reporting bug")
         console.log(error)
@@ -60,7 +62,7 @@ const selector = useSelector(state=>state?.auth?.user);
   return (
     // FIXED LAYOUT: flex, h-screen, overflow-hidden
     <div className="flex h-screen bg-[#FAFAFA] dark:bg-[#020202] text-black dark:text-white transition-colors duration-500 font-sans selection:bg-rose-500/30 overflow-hidden">
-      
+      <Toaster/>
       {/* --- SIDEBAR --- */}
       <Sidebar />
 
