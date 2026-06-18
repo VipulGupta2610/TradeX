@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Sidebar from '../assets/Sidebar';
 import { useSelector } from 'react-redux';
 import { api } from '../api/axios';
+import toast from 'react-hot-toast';
 
 export default function BugReport() {
   const [isDark, setIsDark] = useState(true);
@@ -37,6 +38,7 @@ const selector = useSelector(state=>state?.auth?.user);
     try {
         const res = await api.post("/user/BugReport",formState)
         console.log(res)
+        toast.success("Bug reported")
         setIsSubmitting(false)
     } catch (error) {
         console.log("Error at reporting bug")

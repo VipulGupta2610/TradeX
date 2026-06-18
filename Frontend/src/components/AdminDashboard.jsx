@@ -23,6 +23,7 @@ const navItems = [
   { label: 'Website Builder', icon: BuilderIcon },
   { label: 'Manage Service', icon: ServiceIcon },
   { label: 'Monitoring', icon: MonitorIcon },
+  { label: 'Bugs & Issues', icon: BugIcon },
   { label: 'Activity Log', icon: LogIcon },
 ];
 
@@ -34,6 +35,7 @@ function DomainIcon({ size = 16, color = 'currentColor' }) { return (<svg width=
 function BuilderIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><rect x="3" y="3" width="18" height="14" rx="2" /><path d="M3 8h18M8 21h8M12 17v4" strokeLinecap="round" /></svg>); }
 function ServiceIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>); }
 function MonitorIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" strokeLinecap="round" strokeLinejoin="round" /></svg>); }
+function BugIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M12 2v2m0 20v-2m-5.3-15.3l-1.4-1.4m13.4 1.4l1.4-1.4M4 12h2m14 0h2m-4.3 5.3l1.4 1.4M6.7 17.3l-1.4 1.4M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19 10a7 7 0 00-14 0v4a7 7 0 0014 0v-4z" /></svg>); }
 function LogIcon({ size = 16, color = 'currentColor' }) { return (<svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={1.8}><path d="M9 12h6M9 16h4M7 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-2" strokeLinecap="round" /><rect x="7" y="2" width="10" height="4" rx="1" /></svg>); }
 function BellIcon() { return (<svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" strokeLinecap="round" /></svg>); }
 function SearchIcon() { return (<svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5L21 21" strokeLinecap="round" /></svg>); }
@@ -111,7 +113,7 @@ function BarChart({ data, width = 260, height = 100, color = '#f59e0b', highligh
       {data.map((v, i) => {
         const bh = (v / max) * (height - 8);
         const x = i * gap + (gap - barW) / 2;
-        const isHi = i === data.length - 1; // Highlight the most recent data point
+        const isHi = i === data.length - 1; 
         return (
           <rect
             key={i}
@@ -158,6 +160,7 @@ function DonutChart({ used, total, color = '#6366f1', size = 100, stroke = 14 })
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState('Dashboard');
+  const [bugReports, setBugReports] = useState([]); // NEW dynamic state
   const [apiData, setApiData] = useState({
     totalUsers: 0,
     totalOrders: 0,
@@ -165,7 +168,6 @@ export default function AdminDashboard() {
     todayOrders: []
   });
 
-  // Dynamic Chart State
   const [chartData, setChartData] = useState({
     cdn: [18, 25, 22, 35, 30, 45, 76, 55, 48, 60, 52, 58, 50, 65, 55, 70, 62, 58, 72, 68, 60, 75, 65, 70, 65, 72, 68, 75],
     transfer: [12, 18, 14, 22, 19, 28, 24, 30, 26, 20, 32, 28, 36, 31, 27, 38, 33, 29, 42, 36, 31, 45, 39, 34, 48, 42, 37, 50],
@@ -173,12 +175,18 @@ export default function AdminDashboard() {
     resourceUsage: 72
   });
 
-  // Fetch API Data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await api.get('/admin/AdminDashboard');
-        if (res.data) setApiData(res.data);
+        // Fetch both concurrently
+        const [dashboardRes, bugsRes] = await Promise.all([
+          api.get('/admin/AdminDashboard'),
+          api.get('/admin/AdminDashboard/bugs')
+        ]);
+
+        if (dashboardRes.data) setApiData(dashboardRes.data);
+        if (bugsRes.data) setBugReports(bugsRes.data);
+        
       } catch (err) {
         console.error("Dashboard fetch error:", err);
       }
@@ -186,29 +194,25 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
-  // Simulate Real-time Dynamic Chart Data Updates
   useEffect(() => {
     const interval = setInterval(() => {
       setChartData(prev => {
-        // Generate sensible fluctuations based on the last value
         const nextCdn = Math.max(20, Math.min(100, prev.cdn[prev.cdn.length - 1] + (Math.random() * 14 - 7)));
         const nextTransfer = Math.max(10, Math.min(80, prev.transfer[prev.transfer.length - 1] + (Math.random() * 10 - 5)));
         const nextVisits = Math.max(500, Math.min(1500, prev.visits[prev.visits.length - 1] + (Math.random() * 120 - 60)));
         const nextResource = Math.max(40, Math.min(95, prev.resourceUsage + (Math.random() * 6 - 3)));
 
         return {
-          cdn: [...prev.cdn.slice(1), nextCdn],           // Shift array left, append new value
+          cdn: [...prev.cdn.slice(1), nextCdn],
           transfer: [...prev.transfer.slice(1), nextTransfer],
           visits: [...prev.visits.slice(1), nextVisits],
           resourceUsage: nextResource
         };
       });
-    }, 2500); // Update every 2.5 seconds to simulate live server flow
-
+    }, 2500); 
     return () => clearInterval(interval);
   }, []);
 
-  // Compute dynamic KPIs based on API state
   const dynamicKpis = [
     { label: 'Total Users', value: apiData.totalUsers.toLocaleString(), trend: 'Active Accounts', up: true },
     { label: 'Total Orders', value: apiData.totalOrders.toLocaleString(), trend: 'Lifetime Volume', up: true },
@@ -225,6 +229,21 @@ export default function AdminDashboard() {
       fontFamily: "'Inter', 'SF Pro Display', sans-serif",
       overflow: 'hidden',
     }}>
+      
+      {/* ── GLOBAL STYLE INJECTION TO HIDE SCROLLBARS ── */}
+      <style>
+        {`
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          ::-webkit-scrollbar {
+            display: none;
+          }
+          /* Hide scrollbar for IE, Edge and Firefox */
+          * {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+          }
+        `}
+      </style>
 
       {/* ── SIDEBAR ── */}
       <aside style={{
@@ -404,7 +423,6 @@ export default function AdminDashboard() {
                 <span style={{ fontSize: 11, color: '#4b5563' }}>Real-time</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-                {/* Dynamically passing the generated resourceUsage stat */}
                 <DonutChart used={chartData.resourceUsage} total={100} color="#6366f1" size={96} stroke={13} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -424,7 +442,7 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* ── BOTTOM ROW: Dynamic KPIs + Node Health + Today's Orders ── */}
+          {/* ── KPI & NODE ROW ── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
             {dynamicKpis.map((kpi, i) => (
               <Card key={i} style={{ padding: '14px 16px' }}>
@@ -460,60 +478,101 @@ export default function AdminDashboard() {
             </div>
           </Card>
 
-          {/* Today's Orders from API */}
-          <Card style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Today's Orders</span>
-              <span style={{ fontSize: 11, color: '#6b7280', cursor: 'pointer' }}>View All Orders →</span>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700, fontSize: 12 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
-                    {['Order ID', 'User ID', 'Symbol', 'Name', 'Exchange'].map(h => (
-                      <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 10, color: '#4b5563', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <AnimatePresence>
-                    {apiData.todayOrders.length > 0 ? (
-                      apiData.todayOrders.map((order, idx) => (
-                        <motion.tr
-                          key={order._id}
-                          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.05 * idx }}
-                          style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#d1d5db' }}>{order._id}</td>
-                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{order.userid}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: 700, color: 'white' }}>{order.symbol}</td>
-                          <td style={{ padding: '12px 16px', color: '#9ca3af' }}>{order.name}</td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <span style={{
-                              display: 'inline-block', padding: '3px 8px', borderRadius: 5,
-                              fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
-                              background: 'rgba(99,102,241,0.1)',
-                              color: '#818cf8',
-                              border: '1px solid rgba(99,102,241,0.2)',
-                            }}>{order.exchange}</span>
+          {/* ── BOTTOM ROW: Today's Orders & Bugs Report ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+            {/* Today's Orders */}
+            <Card style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Today's Orders</span>
+                <span style={{ fontSize: 11, color: '#6b7280', cursor: 'pointer' }}>View All Orders →</span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500, fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+                      {['Order ID', 'User ID', 'Symbol', 'Name', 'Exchange'].map(h => (
+                        <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 10, color: '#4b5563', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <AnimatePresence>
+                      {apiData.todayOrders.length > 0 ? (
+                        apiData.todayOrders.map((order, idx) => (
+                          <motion.tr
+                            key={order._id}
+                            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.05 * idx }}
+                            style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#d1d5db' }}>{order._id}</td>
+                            <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{order.userid}</td>
+                            <td style={{ padding: '12px 16px', fontWeight: 700, color: 'white' }}>{order.symbol}</td>
+                            <td style={{ padding: '12px 16px', color: '#9ca3af' }}>{order.name}</td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{
+                                display: 'inline-block', padding: '3px 8px', borderRadius: 5,
+                                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
+                                background: 'rgba(99,102,241,0.1)',
+                                color: '#818cf8',
+                                border: '1px solid rgba(99,102,241,0.2)',
+                              }}>{order.exchange}</span>
+                            </td>
+                          </motion.tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                            No orders processed today yet.
                           </td>
-                        </motion.tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
-                          No orders processed today yet.
-                        </td>
-                      </tr>
-                    )}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                        </tr>
+                      )}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* LIVE DATA SECTION: Bugs Report */}
+            <Card style={{ padding: '16px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Active Bug Reports</span>
+                <span style={{ fontSize: 11, color: '#6b7280', cursor: 'pointer' }}>View All</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {bugReports.length > 0 ? (
+                  bugReports.map((bug) => (
+                    <div key={bug._id} style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#e5e7eb', fontFamily: 'monospace' }}>
+                          {/* Truncate the long MongoDB ObjectId to make it look cleaner like ERR-XXXX */}
+                          {bug._id.slice(-6).toUpperCase()}
+                        </span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, padding: '2px 6px', borderRadius: 4,
+                          background: bug.severity === 'Critical' ? 'rgba(239,68,68,0.15)' : bug.severity === 'High' ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.15)',
+                          color: bug.severity === 'Critical' ? '#fca5a5' : bug.severity === 'High' ? '#fcd34d' : '#93c5fd'
+                        }}>
+                          {bug.severity || 'Medium'}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, lineHeight: 1.4 }}>
+                        <strong style={{ color: '#d1d5db' }}>{bug.title}</strong>: {bug.description}
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                        <span style={{ fontSize: 10, color: '#6b7280' }}>{bug.category} • {bug.userName}</span>
+                        <span style={{ fontSize: 10, color: '#f59e0b' }}>Open</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', padding: '10px 0' }}>No active bugs reported.</p>
+                )}
+              </div>
+            </Card>
+          </div>
 
         </div>
       </main>

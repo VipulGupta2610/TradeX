@@ -1,5 +1,6 @@
 import User from "../schemas/user.schema.js";
 import Order from "../schemas/orders.schema.js";
+import bugs from "../schemas/bugreport.schema.js";
 
 export const Number_of_users = async (req, res) => {
     try {
@@ -39,3 +40,16 @@ export const Number_of_users = async (req, res) => {
         });
     }
 };
+
+export const fetch_bugs = async (req , res)=>{
+    try {
+        const bug = await bugs.find()
+        console.log("Bugs fetched")
+      return  res.status(200).json(bug)
+
+    } catch (error) {
+        console.log("Error at bugs fetching")
+        console.log(error)
+        return res.status(500).json({message:"Internal server error"})
+    }
+}
