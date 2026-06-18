@@ -25,7 +25,7 @@ const bugSchema = mongoose.Schema({
         type:String,
         required:true
     },
-})
+},{timestamps:true})
 
 const bugs = mongoose.model("Bug",bugSchema);
 export default bugs;

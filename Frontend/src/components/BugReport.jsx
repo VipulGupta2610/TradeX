@@ -4,13 +4,14 @@ import { motion } from 'framer-motion';
 // IMPORT SIDEBAR
 import Sidebar from '../assets/Sidebar';
 import { useSelector } from 'react-redux';
+import { api } from '../api/axios';
 
 export default function BugReport() {
   const [isDark, setIsDark] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
 const selector = useSelector(state=>state?.auth?.user);
-console.log(selector)
+// console.log(selector)
   
   const [formState, setFormState] = useState({
     userName:selector?.name,
@@ -29,16 +30,19 @@ console.log(selector)
     }
   }, [isDark]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit =async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    console.log(formState)
-    // Mock submission delay
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setFormState({ title: '', category: 'Execution Engine', severity: 'Medium', description: '' });
-      // Trigger success toast here
-    }, 1500);
+    // console.log(formState)
+    try {
+        const res = await api.post("/user/BugReport",formState)
+        console.log(res)
+        setIsSubmitting(false)
+    } catch (error) {
+        console.log("Error at reporting bug")
+        console.log(error)
+        console.log(res)
+    }
   };
 
   // Framer Motion Variants

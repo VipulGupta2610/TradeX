@@ -6,6 +6,7 @@ import { cancelOrder, getMyOrders, newOrder, processOrders } from "../controller
 
 // Import the new trade journal controllers
 import { getMyJournal, updateTradeJournal } from "../controllers/tradeHis.controller.js";
+import { report_bug } from "../controllers/bugReport.controller.js";
 
 const router = express.Router()
 
@@ -36,5 +37,8 @@ router.delete("/account/:userid", deleteAccount)
 // --- TRADE JOURNAL ROUTES ---
 router.get("/TradeJournal/:userid", getMyJournal)
 router.patch("/Trades/:tradeid", updateTradeJournal)
+
+// -- Bug report --
+router.post("/BugReport",report_bug)
 
 export default router;
