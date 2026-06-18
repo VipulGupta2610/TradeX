@@ -23,6 +23,7 @@ import LearningCenter from './components/LearningCenter';
 import AccountSettings from './components/AccountSettings';
 import NotFound from './components/NotFound';
 import AdminDashboard from "./components/AdminDashboard";
+import BugReport from "./components/BugReport";
 
 const router = createBrowserRouter([{
     path:"/",
@@ -53,7 +54,7 @@ const router = createBrowserRouter([{
         element:<AICoach/>
       },
       {
-        path:"/TradeJournal",
+        path:"/TradeJournal/:userid",
         element:<TradeJournal/>
       },
       {
@@ -67,6 +68,10 @@ const router = createBrowserRouter([{
       {
         path:"/TradeHistory",
         element:<TradeHistory/>
+      },
+      {
+        path:"/BugReport",
+        element:<BugReport/>
       },
       {
         path:"/Positions/:userid",

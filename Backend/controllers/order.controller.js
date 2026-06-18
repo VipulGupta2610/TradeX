@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import orders from "../schemas/orders.schema.js";
 import positions from "../schemas/positions.schema.js";
 import User from "../schemas/user.schema.js";
+import trades from "../schemas/tradeHis.schema.js"; // <-- 1. IMPORT THE NEW TRADES SCHEMA
 
 const roundMoney = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -88,6 +89,7 @@ const executeOrder = async order => {
             throw error;
         }
     } else {
+        // --- SELL LOGIC (CLOSING POSITION & LOGGING TRADE) ---
         const position = await positions.findOne({
             userid: order.userid,
             symbol: order.symbol,
@@ -100,20 +102,37 @@ const executeOrder = async order => {
             throw error;
         }
 
-        position.quantity = roundMoney(position.quantity - order.quantity);
-        if (position.quantity === 0) await position.deleteOne();
-        else await position.save();
+        // 2. CALCULATE REALIZED PNL
+        // (Exit Price - Entry Price) * Quantity sold
+        const realizedPnl = roundMoney((executionPrice - position.avgPrice) * order.quantity);
 
         try {
+            // Add funds back to user
             await User.updateOne(
                 { _id: order.userid },
                 { $inc: { virtualBalance: orderValue } }
             );
+
+            // 3. CREATE THE TRADE JOURNAL ENTRY
+            await trades.create({
+                userid: order.userid,
+                symbol: order.symbol,
+                entryPrice: position.avgPrice,
+                exitPrice: executionPrice,
+                quantity: order.quantity,
+                realizedPnl: realizedPnl,
+                openedAt: position.createdAt, // Tracks when the position was initially established
+                closedAt: new Date()
+            });
+
         } catch (error) {
-            position.quantity = roundMoney(position.quantity + order.quantity);
-            await position.save();
             throw error;
         }
+
+        // Reduce position quantity or delete if 0
+        position.quantity = roundMoney(position.quantity - order.quantity);
+        if (position.quantity === 0) await position.deleteOne();
+        else await position.save();
     }
 
     order.status = "Executed";

@@ -18,13 +18,14 @@ function Sidebar() {
     ['TradingTerminal', '/TradingTerminal'],
     ['Order History', '/OrderHistory'],
     ['Trade History', '/TradeHistory'],
-    // ['Trade Journal', '/TradeJournal'],
+    ['Trade Journal', userPath('TradeJournal')],
     // ['Market Explorer', '/MarketExplorer'],
     // ['Leaderboard', '/Leaderboard'],
     // ['Challenges', '/Challenges'],
     // ['AI Coach', '/AICoach'],
     // ['Learning Center', '/LearningCenter'],
-    // ['Subscription', '/Subscription'],
+    ['Report a Bug', '/BugReport'],
+    ['Subscription', '/Subscription'],
   ];
 
   return (

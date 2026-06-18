@@ -4,6 +4,9 @@ import { addToWatchlist, getMyWatchlist, removeFromWatchlist } from "../controll
 import { getMyPositions } from "../controllers/postions.schema.js";
 import { cancelOrder, getMyOrders, newOrder, processOrders } from "../controllers/order.controller.js";
 
+// Import the new trade journal controllers
+import { getMyJournal, updateTradeJournal } from "../controllers/tradeHis.controller.js";
+
 const router = express.Router()
 
 // authentication routes
@@ -30,4 +33,8 @@ router.post("/reset/:userid", resetPaperAccount)
 router.post("/funds/:userid", adjustVirtualFunds)
 router.delete("/account/:userid", deleteAccount)
 
-export default router
+// --- TRADE JOURNAL ROUTES ---
+router.get("/TradeJournal/:userid", getMyJournal)
+router.patch("/Trades/:tradeid", updateTradeJournal)
+
+export default router;
