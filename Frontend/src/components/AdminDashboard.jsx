@@ -118,13 +118,13 @@ function LineChart({ data, width = 260, height = 100, color = '#fff' }) {
 }
 
 function BarChart({ data, width = 260, height = 100, color = '#f59e0b', highlightColor = '#fff' }) {
-  const max = Math.max(...data);
+  const max = Math.max(...data) || 1; // Fallback to 1 to prevent division by zero
   const barW = (width / data.length) * 0.55;
   const gap = width / data.length;
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
       {data.map((v, i) => {
-        const bh = (v / max) * (height - 8);
+        const bh = Math.max((v / max) * (height - 8), 2); // Minimum 2px height so 0 isn't invisible
         const x = i * gap + (gap - barW) / 2;
         const isHi = i === data.length - 1; 
         return (
@@ -183,8 +183,8 @@ export default function AdminDashboard() {
 
   const [chartData, setChartData] = useState({
     cdn: [18, 25, 22, 35, 30, 45, 76, 55, 48, 60, 52, 58, 50, 65, 55, 70, 62, 58, 72, 68, 60, 75, 65, 70, 65, 72, 68, 75],
-    transfer: [12, 18, 14, 22, 19, 28, 24, 30, 26, 20, 32, 28, 36, 31, 27, 38, 33, 29, 42, 36, 31, 45, 39, 34, 48, 42, 37, 50],
-    visits: [320, 410, 380, 520, 460, 610, 580, 720, 680, 540, 760, 720, 880, 810, 730, 920, 870, 800, 980, 930, 860, 1040, 980, 910, 1100, 1042, 970, 1200],
+    ordersVolume: [12, 18, 14, 22, 19, 28, 24, 30, 26, 20, 32, 28, 36, 31, 27, 38, 33, 29, 42, 36, 31, 45, 39, 34, 48, 42, 37, 50], // Mapped to Orders
+    dailyBugsMock: [3, 5, 2, 7, 4, 6, 3, 8, 5, 2, 4, 6, 3], // 13 days of mock data (14th will be today's live data)
     resourceUsage: 72
   });
 
@@ -210,14 +210,13 @@ export default function AdminDashboard() {
     const interval = setInterval(() => {
       setChartData(prev => {
         const nextCdn = Math.max(20, Math.min(100, prev.cdn[prev.cdn.length - 1] + (Math.random() * 14 - 7)));
-        const nextTransfer = Math.max(10, Math.min(80, prev.transfer[prev.transfer.length - 1] + (Math.random() * 10 - 5)));
-        const nextVisits = Math.max(500, Math.min(1500, prev.visits[prev.visits.length - 1] + (Math.random() * 120 - 60)));
+        const nextOrderVol = Math.max(10, Math.min(80, prev.ordersVolume[prev.ordersVolume.length - 1] + (Math.random() * 10 - 5)));
         const nextResource = Math.max(40, Math.min(95, prev.resourceUsage + (Math.random() * 6 - 3)));
 
         return {
+          ...prev, // Keep the dailyBugsMock static since it's daily data
           cdn: [...prev.cdn.slice(1), nextCdn],
-          transfer: [...prev.transfer.slice(1), nextTransfer],
-          visits: [...prev.visits.slice(1), nextVisits],
+          ordersVolume: [...prev.ordersVolume.slice(1), nextOrderVol],
           resourceUsage: nextResource
         };
       });
@@ -225,14 +224,10 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // UPDATED: Fixed delete logic and added state update
   const handledeletebug = async (bugId) => {
     try {
-      // For DELETE requests with Axios, pass data via URL params (best practice)
       await api.delete(`/admin/AdminDashboard/deletebug/${bugId}`);
-      toast.success("Bug resolved")
-      // If your backend absolutely requires the ID inside the request body, uncomment this instead:
-      // await api.delete("/admin/AdminDashboard/deletebug", { data: { id: bugId } });
+      toast.success("Bug resolved");
 
       // Instantly remove the deleted bug from the UI without refreshing
       setBugReports((prevBugs) => prevBugs.filter((b) => b._id !== bugId));
@@ -414,18 +409,22 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* ── MIDDLE ROW: Data Transfer + Unique Visits + Resource Usage ── */}
+          {/* ── MIDDLE ROW: Orders Today + Daily Bugs + Resource Usage ── */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 260px', gap: 16 }}>
+            
+            {/* UPDATED: Orders Today Line Chart */}
             <Card>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <div>
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>API Requests</p>
-                  <p style={{ fontSize: 11, color: '#374151', margin: 0 }}>Requests/sec</p>
+                  <p style={{ fontSize: 12, color: '#909cad', margin: 0 }}>Orders Today</p>
+                  <p style={{ fontSize: 11, color: '#909cad', margin: 0 }}>Processing Volume</p>
                 </div>
-                <span style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{Math.round(chartData.transfer[chartData.transfer.length - 1])}k</span>
+                {/* Dynamically pulls the live todayOrdersCount */}
+                <span style={{ fontSize: 20, fontWeight: 800, color: '#10b981' }}>{apiData.todayOrdersCount.toLocaleString()}</span>
               </div>
-              <LineChart data={chartData.transfer.slice(-14)} width={260} height={88} color="#e5e7eb" />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#374151', marginTop: 4 }}>
+              {/* Added a green #10b981 color to represent successful orders */}
+              <LineChart data={chartData.ordersVolume.slice(-14)} width={260} height={88} color="#10b981" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#909cad', marginTop: 4 }}>
                 {['-30s', '-25s', '-20s', '-15s', '-10s', '-5s', 'Now'].map(l => <span key={l}>{l}</span>)}
               </div>
             </Card>
@@ -433,14 +432,20 @@ export default function AdminDashboard() {
             <Card>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <div>
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Active Users</p>
-                  <p style={{ fontSize: 11, color: '#374151', margin: 0 }}>Current Online</p>
+                  <p style={{ fontSize: 12, color: '#909cad', margin: 0 }}>Bug Reports</p>
+                  <p style={{ fontSize: 11, color: '#909cad', margin: 0 }}>Daily Frequency</p>
                 </div>
-                <span style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{Math.round(chartData.visits[chartData.visits.length - 1])}</span>
+                <span style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{bugReports.length}</span>
               </div>
-              <BarChart data={chartData.visits.slice(-14)} width={260} height={88} color="#4b5563" highlightColor="#f59e0b" />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#374151', marginTop: 4 }}>
-                {['-30s', '-25s', '-20s', '-15s', '-10s', '-5s', 'Now'].map(l => <span key={l}>{l}</span>)}
+              <BarChart 
+                data={[...chartData.dailyBugsMock, bugReports.length]} 
+                width={260} 
+                height={88} 
+                color="#4b5563" 
+                highlightColor="#ef4444" 
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#909cad', marginTop: 4 }}>
+                {['-14d', '-12d', '-10d', '-8d', '-6d', '-4d', 'Today'].map(l => <span key={l}>{l}</span>)}
               </div>
             </Card>
 
@@ -569,49 +574,55 @@ export default function AdminDashboard() {
                 <span style={{ fontSize: 11, color: '#6b7280', cursor: 'pointer' }}>View All</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {bugReports.length > 0 ? (
-                  bugReports.map((bug) => (
-                    <div key={bug._id} style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#e5e7eb', fontFamily: 'monospace' }}>
-                          {bug._id.slice(-6).toUpperCase()}
-                        </span>
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, padding: '2px 6px', borderRadius: 4,
-                          background: bug.severity === 'Critical' ? 'rgba(239,68,68,0.15)' : bug.severity === 'High' ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.15)',
-                          color: bug.severity === 'Critical' ? '#fca5a5' : bug.severity === 'High' ? '#fcd34d' : '#93c5fd'
-                        }}>
-                          {bug.severity || 'Medium'}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, lineHeight: 1.4 }}>
-                        <strong style={{ color: '#d1d5db' }}>{bug.title}</strong>: {bug.description}
-                      </p>
-                      
-                      {/* UPDATED: Fixed button onClick execution */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                        <span style={{ fontSize: 10, color: '#6b7280' }}>
-                           {bug.category} • {formatDate(bug.createdAt)}
-                        </span>
-                        <button 
-                          onClick={() => handledeletebug(bug._id)} 
-                          style={{ 
-                            fontSize: 10, 
-                            color: '#10b981', 
-                            background: 'transparent', 
-                            border: '1px solid rgba(16, 185, 129, 0.3)', 
-                            padding: '2px 8px', 
-                            borderRadius: '4px',
-                            cursor: 'pointer' 
+                <AnimatePresence>
+                  {bugReports.length > 0 ? (
+                    bugReports.map((bug) => (
+                      <motion.div 
+                        key={bug._id} 
+                        initial={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0, overflow: 'hidden', padding: 0 }}
+                        style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#e5e7eb', fontFamily: 'monospace' }}>
+                            {bug._id.slice(-6).toUpperCase()}
+                          </span>
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, padding: '2px 6px', borderRadius: 4,
+                            background: bug.severity === 'Critical' ? 'rgba(239,68,68,0.15)' : bug.severity === 'High' ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.15)',
+                            color: bug.severity === 'Critical' ? '#fca5a5' : bug.severity === 'High' ? '#fcd34d' : '#93c5fd'
                           }}>
-                          Resolve
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', padding: '10px 0' }}>No active bugs reported.</p>
-                )}
+                            {bug.severity || 'Medium'}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, lineHeight: 1.4 }}>
+                          <strong style={{ color: '#d1d5db' }}>{bug.title}</strong>: {bug.description}
+                        </p>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                          <span style={{ fontSize: 10, color: '#6b7280' }}>
+                             {bug.category} • {formatDate(bug.createdAt)}
+                          </span>
+                          <button 
+                            onClick={() => handledeletebug(bug._id)} 
+                            style={{ 
+                              fontSize: 10, 
+                              color: '#10b981', 
+                              background: 'transparent', 
+                              border: '1px solid rgba(16, 185, 129, 0.3)', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px',
+                              cursor: 'pointer' 
+                            }}>
+                            Resolve
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <p style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', padding: '10px 0' }}>No active bugs reported.</p>
+                  )}
+                </AnimatePresence>
               </div>
             </Card>
           </div>
