@@ -53,3 +53,16 @@ export const fetch_bugs = async (req , res)=>{
         return res.status(500).json({message:"Internal server error"})
     }
 }
+
+export const delete_bug = async (req  , res)=>{
+    try {
+        const {bugId} = req.params;
+        await bugs.findOneAndDelete({_id:bugId})
+        console.log("Bug deleted")
+        return res.status(200).json({message:'Bug deleted'})
+    } catch (error) {
+        console.log("Error at delete bug")
+        console.log(error)
+        return res.status(500).json({message:"Internal server error",error})
+    }
+}

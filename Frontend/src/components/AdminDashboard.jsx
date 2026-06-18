@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/axios';
+import toast, { Toaster } from 'react-hot-toast';
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
 const formatDate = (isoString) => {
-  if (!isoString) return 'Recently'; // Fallback for older DB entries without timestamps
+  if (!isoString) return 'Recently'; 
   const date = new Date(isoString);
   return date.toLocaleDateString('en-US', {
     month: 'short',
@@ -224,6 +225,22 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // UPDATED: Fixed delete logic and added state update
+  const handledeletebug = async (bugId) => {
+    try {
+      // For DELETE requests with Axios, pass data via URL params (best practice)
+      await api.delete(`/admin/AdminDashboard/deletebug/${bugId}`);
+      toast.success("Bug resolved")
+      // If your backend absolutely requires the ID inside the request body, uncomment this instead:
+      // await api.delete("/admin/AdminDashboard/deletebug", { data: { id: bugId } });
+
+      // Instantly remove the deleted bug from the UI without refreshing
+      setBugReports((prevBugs) => prevBugs.filter((b) => b._id !== bugId));
+    } catch (error) {
+      console.error("Failed to delete bug:", error);
+    }
+  };
+
   const dynamicKpis = [
     { label: 'Total Users', value: apiData.totalUsers.toLocaleString(), trend: 'Active Accounts', up: true },
     { label: 'Total Orders', value: apiData.totalOrders.toLocaleString(), trend: 'Lifetime Volume', up: true },
@@ -264,6 +281,7 @@ export default function AdminDashboard() {
         flexShrink: 0,
         zIndex: 10,
       }}>
+        <Toaster/>
         <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
@@ -570,12 +588,24 @@ export default function AdminDashboard() {
                         <strong style={{ color: '#d1d5db' }}>{bug.title}</strong>: {bug.description}
                       </p>
                       
-                      {/* UPDATED: Displays formatted createdAt date or fallback text */}
+                      {/* UPDATED: Fixed button onClick execution */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                         <span style={{ fontSize: 10, color: '#6b7280' }}>
                            {bug.category} • {formatDate(bug.createdAt)}
                         </span>
-                        <span style={{ fontSize: 10, color: '#f59e0b' }}>Open</span>
+                        <button 
+                          onClick={() => handledeletebug(bug._id)} 
+                          style={{ 
+                            fontSize: 10, 
+                            color: '#10b981', 
+                            background: 'transparent', 
+                            border: '1px solid rgba(16, 185, 129, 0.3)', 
+                            padding: '2px 8px', 
+                            borderRadius: '4px',
+                            cursor: 'pointer' 
+                          }}>
+                          Resolve
+                        </button>
                       </div>
                     </div>
                   ))
