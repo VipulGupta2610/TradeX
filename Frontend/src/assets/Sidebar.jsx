@@ -24,8 +24,8 @@ function Sidebar() {
     // ['Challenges', '/Challenges'],
     // ['AI Coach', '/AICoach'],
     // ['Learning Center', '/LearningCenter'],
-    ['Report a Bug', '/BugReport'],
     ['Subscription', '/Subscription'],
+    ['Report a Bug', '/BugReport'],
   ];
 
   return (

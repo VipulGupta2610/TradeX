@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux"
 import {Link} from "react-router-dom"
-import { useTheme } from "./ThemeProvider";
+import  ThemeToggle from './ThemeToggle';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:2222";
 const socket = io(API_BASE);
@@ -705,7 +705,7 @@ export default function TradingTerminal() {
   const processingOrders = useRef(false);
 
   // Theme
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme } = ThemeToggle;
 
   // Live clock (bug fix: was static)
   const [clockTime, setClockTime] = useState(() => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
@@ -2605,3 +2605,4 @@ Provide concise, actionable analysis. Use bullet points and bold for key levels.
       </div>
     </div>
   );
+}
