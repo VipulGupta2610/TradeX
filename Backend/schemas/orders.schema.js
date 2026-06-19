@@ -59,7 +59,15 @@ const orderSchema = mongoose.Schema({
         default:"Pending"
     },
     executedAt: Date,
-    cancelledAt: Date
+    cancelledAt: Date,
+    
+    // --- NEW: AI Prediction Metrics ---
+    aiMetrics: {
+        adx: { type: Number, default: null },
+        macd: { type: Number, default: null },
+        rsi: { type: Number, default: null },
+        volume: { type: Number, default: null }
+    }
 }, { timestamps: true });
 
 const orders = mongoose.model("Orders" , orderSchema);

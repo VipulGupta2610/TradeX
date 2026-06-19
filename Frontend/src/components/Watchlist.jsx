@@ -61,7 +61,18 @@ export default function Watchlist() {
   return (
     // FIXED LAYOUT: flex, h-screen, overflow-hidden to allow sidebar to sit side-by-side
     <div className="flex h-screen bg-[#FAFAFA] dark:bg-[#020202] text-black dark:text-white transition-colors duration-500 font-sans selection:bg-emerald-500/30 overflow-hidden">
-      
+      {/* ── GLOBAL STYLE INJECTION TO HIDE SCROLLBARS ── */}
+      <style>
+        {`
+          ::-webkit-scrollbar {
+            display: none;
+          }
+          * {
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+          }
+        `}
+      </style>
       {/* --- SIDEBAR --- */}
       <Sidebar />
 

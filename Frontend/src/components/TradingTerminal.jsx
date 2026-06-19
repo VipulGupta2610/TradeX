@@ -1383,10 +1383,57 @@ Provide concise, actionable analysis. Use bullet points and bold for key levels.
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [aiMessages]);
 
-  const handleOrder = useCallback(async (order) => {
+const handleOrder = useCallback(async (order) => {
     if (!userId) throw new Error("Please log in to place an order");
 
-    const data = await tradingRequest("/user/Orders", {
+    // 1. Get the latest candle data for the specific symbol
+    const data = candleStore[order.sym] || [];
+    const currentVolume = data.length > 0 ? data[data.length - 1].volume : 0;
+
+    // 2. Calculate latest RSI (14 period)
+    const rsiArr = computeRSI(data, 14);
+    const currentRsi = rsiArr.length > 0 ? rsiArr[rsiArr.length - 1] : null;
+
+    // 3. Calculate latest MACD (12, 26)
+    const emaFn = (d, p) => {
+      const k = 2 / (p + 1); let e = d[0];
+      return d.map(v => { e = v * k + e * (1 - k); return e; });
+    };
+    const cl = data.map(c => c.close);
+    let currentMacd = null;
+    if (cl.length > 0) {
+      const e12 = emaFn(cl, 12), e26 = emaFn(cl, 26);
+      const macdL = e12.map((v, i) => v - e26[i]);
+      currentMacd = macdL[macdL.length - 1];
+    }
+
+    // 4. Calculate latest ADX (14 period) using your terminal's formula
+    let currentAdx = null;
+    const per = 14;
+    if (data.length >= per) {
+      let pdm = 0, ndm = 0, tr = 0;
+      const i = data.length - 1;
+      for (let j = i - per + 1; j <= i; j++) {
+        const prevHigh = data[j - 1] ? data[j - 1].high : data[j].high;
+        const prevLow = data[j - 1] ? data[j - 1].low : data[j].low;
+        const prevClose = data[j - 1] ? data[j - 1].close : data[j].open;
+
+        const h = data[j].high - prevHigh;
+        const l = prevLow - data[j].low;
+
+        pdm += Math.max(h, 0);
+        ndm += Math.max(l, 0);
+        tr += Math.max(
+          data[j].high - data[j].low,
+          Math.abs(data[j].high - prevClose),
+          Math.abs(data[j].low - prevClose)
+        );
+      }
+      currentAdx = tr ? 100 * Math.abs(pdm - ndm) / tr : 0;
+    }
+
+    // 5. Append aiMetrics to the payload
+    const resData = await tradingRequest("/user/Orders", {
       method: "POST",
       body: JSON.stringify({
         userid: userId,
@@ -1399,19 +1446,25 @@ Provide concise, actionable analysis. Use bullet points and bold for key levels.
         validity: order.validity,
         quantity: order.qty,
         price: order.price,
-        marketPrice: order.marketPrice
+        marketPrice: order.marketPrice,
+        aiMetrics: {
+          adx: currentAdx ? Number(currentAdx.toFixed(2)) : null,
+          macd: currentMacd ? Number(currentMacd.toFixed(2)) : null,
+          rsi: currentRsi ? Number(currentRsi.toFixed(2)) : null,
+          volume: currentVolume
+        }
       })
     });
 
-    applyTradingState(data);
-    const executed = data.order?.status === "COMPLETE";
+    applyTradingState(resData);
+    const executed = resData.order?.status === "COMPLETE";
     addToast(
       executed
-        ? `${order.side} ${order.qty} ${order.sym} @ ₹${fmt(data.order.price)} executed`
+        ? `${order.side} ${order.qty} ${order.sym} @ ₹${fmt(resData.order.price)} executed`
         : `${order.side} ${order.qty} ${order.sym} order placed`,
       executed ? (order.side === "BUY" ? "success" : "error") : "warning"
     );
-  }, [userId, activeSym, applyTradingState, addToast]);
+  }, [userId, activeSym, applyTradingState, addToast, candleStore]);
 
   const handleCancelOrder = useCallback(async order => {
     if (!userId) return;

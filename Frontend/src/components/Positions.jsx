@@ -56,7 +56,18 @@ export default function Positions() {
   return (
     // FIXED LAYOUT: flex, h-screen, overflow-hidden
     <div className="flex h-screen bg-[#FAFAFA] dark:bg-[#000000] text-black dark:text-white transition-colors duration-500 font-sans selection:bg-emerald-500/30 overflow-hidden">
-      
+      {/* ── GLOBAL STYLE INJECTION TO HIDE SCROLLBARS ── */}
+      <style>
+        {`
+          ::-webkit-scrollbar {
+            display: none;
+          }
+          * {
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+          }
+        `}
+      </style>
       {/* --- SIDEBAR --- */}
       <Sidebar />
 

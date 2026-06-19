@@ -3,19 +3,18 @@ import mongoose from "mongoose";
 const tradesSchema = mongoose.Schema({
     userid: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Users", // Ensure this matches your User model export exactly
+        ref: "Users", 
         required: true
     },
     symbol: {
         type: String,
         required: true
     },
-    // The Quantitative Data
-    entryPrice: { // Renamed from buyprice to support shorting
+    entryPrice: { 
         type: Number,
         required: true
     },
-    exitPrice: { // Renamed from sellprice
+    exitPrice: { 
         type: Number,
         required: true
     },
@@ -23,7 +22,7 @@ const tradesSchema = mongoose.Schema({
         type: Number,
         required: true
     },
-    realizedPnl: { // Renamed from prfitnloss and changed to Number!
+    realizedPnl: { 
         type: Number, 
         required: true
     },
@@ -39,16 +38,30 @@ const tradesSchema = mongoose.Schema({
     // --- THE NEW JOURNALING FIELDS ---
     setupName: { 
         type: String, 
-        default: "" // e.g., "Breakout Pullback" (from your top right UI)
+        default: "" 
     },
     tags: [{ 
-        type: String // Array of strings e.g., ["Followed Plan", "Patience"]
+        type: String 
     }],
     thesisNotes: {
         type: String,
         default: ""
     },
     mistakesNotes: {
+        type: String,
+        default: ""
+    },
+
+    // --- NEW: AI Prediction Metrics at Entry ---
+    aiMetrics: {
+        adx: { type: Number, default: null },
+        macd: { type: Number, default: null },
+        rsi: { type: Number, default: null },
+        volume: { type: Number, default: null }
+    },
+    
+    // Optional: A place to store what the AI actually predicted
+    aiPredictionNotes: {
         type: String,
         default: ""
     }

@@ -75,9 +75,21 @@ export default function PortfolioUltra() {
   };
 
   return (
-    // FIXED: Changed to h-screen, removed pt-10, and set flex row to constrain layout to viewport
-    <div className="relative flex min-h-screen flex-col bg-gray-100 font-sans text-gray-800 transition-colors duration-500 dark:bg-gray-900 dark:text-gray-100 md:h-screen md:flex-row md:overflow-hidden">
+    <div className="relative flex min-h-screen flex-col bg-gray-100 font-sans text-gray-800 transition-colors duration-500 dark:bg-gray-900 dark:text-gray-100 md:h-screen md:flex-row md:overflow-hidden overflow-y-auto">
       
+      {/* ── GLOBAL STYLE INJECTION TO HIDE SCROLLBARS ── */}
+      <style>
+        {`
+          ::-webkit-scrollbar {
+            display: none;
+          }
+          * {
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+          }
+        `}
+      </style>
+
       {/* --- IMMERSIVE BACKGROUND --- */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] max-w-[1000px] max-h-[1000px] bg-gradient-radial from-green-100 via-transparent to-transparent blur-[100px]" />
@@ -85,11 +97,9 @@ export default function PortfolioUltra() {
         <div className="absolute inset-0 opacity-10 dark:opacity-20 bg-grid" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       </div>
 
-      {/* Sidebar now sits perfectly flush against the left edge */}
       <Sidebar />
 
-      {/* FIXED: <main> takes the rest of the screen and controls its own scrolling. The max-w wrapper goes inside so the scrollbar hugs the right edge of the screen. */}
-      <main className="relative z-10 flex-1 overflow-y-auto">
+      <main className="relative z-10 flex-1 overflow-y-auto no-scrollbar">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:px-10 md:py-12">
           <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
 

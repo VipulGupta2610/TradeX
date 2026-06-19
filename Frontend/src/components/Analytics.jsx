@@ -94,7 +94,18 @@ export default function Analytics() {
   return (
     // FIXED: Added h-screen and flex to create the side-by-side layout
     <div className="relative flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900 transition-colors duration-300 selection:bg-blue-500/20 dark:bg-[#0A0A0A] dark:text-slate-100 md:h-screen md:flex-row md:overflow-hidden">
-      
+      {/* ── GLOBAL STYLE INJECTION TO HIDE SCROLLBARS ── */}
+      <style>
+        {`
+          ::-webkit-scrollbar {
+            display: none;
+          }
+          * {
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+          }
+        `}
+      </style>
       {/* --- SUBTLE BACKGROUND AMBIENCE --- */}
       <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-slate-200/50 to-transparent dark:from-white/[0.02] pointer-events-none -z-10" />
 

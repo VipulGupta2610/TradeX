@@ -45,71 +45,92 @@ export default function OrderHistory() {
   };
 
   return (
-    // FIXED LAYOUT: flex, h-screen, overflow-hidden
-    <div className="flex h-screen bg-[#FAFAFA] dark:bg-[#020202] text-black dark:text-white transition-colors duration-500 font-sans selection:bg-emerald-500/30 overflow-hidden">
+    // FIXED: flex-col md:flex-row and h-[100dvh] for mobile viewport safety
+    <div className="flex flex-col md:flex-row h-[100dvh] bg-[#FAFAFA] dark:bg-[#020202] text-black dark:text-white transition-colors duration-500 font-sans selection:bg-emerald-500/30 overflow-hidden">
+      {/* ── GLOBAL STYLE INJECTION TO HIDE SCROLLBARS ── */}
+      <style>
+        {`
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .no-scrollbar {
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+          }
+          ::-webkit-scrollbar {
+            display: none;
+          }
+          * {
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+          }
+        `}
+      </style>
       
       {/* --- SIDEBAR --- */}
       <Sidebar />
 
       {/* --- SCROLLABLE MAIN WRAPPER --- */}
-      <div className="flex-1 relative overflow-y-auto overflow-x-hidden">
+      {/* FIXED: added w-full to prevent flex blowout */}
+      <div className="flex-1 w-full relative overflow-y-auto overflow-x-hidden">
         
         {/* --- IMMERSIVE BACKGROUND --- */}
-        {/* Removed 'fixed' so it stays inside the flex-1 wrapper */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-10%] right-[-5%] w-[50vw] h-[50vw] max-w-[800px] max-h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_60%)] blur-[100px]" />
-          <div className="absolute bottom-[-10%] left-[-5%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.05),transparent_60%)] blur-[100px]" />
+          <div className="absolute top-[-10%] right-[-5%] w-[80vw] h-[80vw] md:w-[50vw] md:h-[50vw] max-w-[800px] max-h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_60%)] blur-[100px]" />
+          <div className="absolute bottom-[-10%] left-[-5%] w-[60vw] h-[60vw] md:w-[40vw] md:h-[40vw] max-w-[600px] max-h-[600px] bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.05),transparent_60%)] blur-[100px]" />
           
-          {/* Fine Grain Noise Texture */}
           <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
           
-          {/* Subtle Grid */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:linear-gradient(to_bottom,black_10%,transparent_100%)]" />
         </div>
 
         {/* --- MAIN CONTENT AREA --- */}
-        <main className="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12 py-12">
-          <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+        <main className="relative z-10 w-full max-w-[1600px] mx-auto px-4 md:px-12 py-8 md:py-12">
+          <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 w-full">
             
             {/* HEADER & METRICS ROW */}
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-8 mb-8">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 md:gap-8 mb-4 md:mb-8">
               <motion.div variants={item}>
-                <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <h2 className="text-xs md:text-sm font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" /> Execution History
                 </h2>
-                <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-none">Order Book.</h1>
+                {/* FIXED: Scaled down text size for mobile */}
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-none">Order Book.</h1>
               </motion.div>
 
               {/* Quick Analytics Bento */}
-              <motion.div variants={item} className="flex gap-4 w-full xl:w-auto overflow-x-auto scrollbar-hide pb-2">
-                <div className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-5 min-w-[160px] shadow-sm">
+              {/* FIXED: Ensured full width and smooth scrolling on mobile */}
+              <motion.div variants={item} className="flex gap-4 w-full xl:w-auto overflow-x-auto no-scrollbar pb-2 snap-x">
+                <div className="snap-start bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-4 md:p-5 min-w-[140px] md:min-w-[160px] shadow-sm">
                   <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">30D Volume</p>
-                  <p className="text-2xl font-mono font-black">₹{orders.reduce((sum, order) => sum + Number(order.price || 0) * Number(order.qty || 0), 0).toLocaleString('en-IN')}</p>
+                  <p className="text-xl md:text-2xl font-mono font-black">₹{orders.reduce((sum, order) => sum + Number(order.price || 0) * Number(order.qty || 0), 0).toLocaleString('en-IN')}</p>
                 </div>
-                <div className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-5 min-w-[160px] shadow-sm">
+                <div className="snap-start bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-4 md:p-5 min-w-[140px] md:min-w-[160px] shadow-sm">
                   <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Trades</p>
-                  <p className="text-2xl font-mono font-black">{orders.length}</p>
+                  <p className="text-xl md:text-2xl font-mono font-black">{orders.length}</p>
                 </div>
-                <div className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-5 min-w-[160px] shadow-sm">
+                <div className="snap-start bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border border-black/5 dark:border-white/[0.08] rounded-2xl p-4 md:p-5 min-w-[140px] md:min-w-[160px] shadow-sm">
                   <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Fill Rate</p>
-                  <p className="text-2xl font-mono font-black text-emerald-500">{orders.length ? ((metrics.executedOrders / orders.length) * 100).toFixed(1) : '0.0'}%</p>
+                  <p className="text-xl md:text-2xl font-mono font-black text-emerald-500">{orders.length ? ((metrics.executedOrders / orders.length) * 100).toFixed(1) : '0.0'}%</p>
                 </div>
               </motion.div>
             </div>
 
             {/* MAIN DATA TABLE WRAPPER */}
-            <motion.div variants={item} className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-3xl border border-black/5 dark:border-white/[0.08] rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
+            {/* FIXED: Added min-w-0 to prevent flex children from overflowing the viewport */}
+            <motion.div variants={item} className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-3xl border border-black/5 dark:border-white/[0.08] rounded-[24px] md:rounded-[40px] shadow-2xl overflow-hidden flex flex-col w-full min-w-0">
               
               {/* Filters & Actions Bar */}
-              <div className="p-8 border-b border-black/5 dark:border-white/[0.05] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-black/[0.01] dark:bg-white/[0.01]">
+              <div className="p-4 md:p-8 border-b border-black/5 dark:border-white/[0.05] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6 bg-black/[0.01] dark:bg-white/[0.01]">
                 
                 {/* Status Filters */}
-                <div className="flex p-1.5 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/[0.05]">
+                {/* FIXED: Made this scrollable horizontally so buttons don't wrap weirdly on tiny screens */}
+                <div className="flex overflow-x-auto no-scrollbar w-full lg:w-auto p-1.5 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/[0.05]">
                   {['All', 'Filled', 'Pending', 'Canceled'].map(status => (
                     <button 
                       key={status}
                       onClick={() => setActiveFilter(status)}
-                      className={`px-5 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${activeFilter === status ? 'bg-white dark:bg-[#1A1A1A] text-black dark:text-white shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)]' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
+                      className={`whitespace-nowrap px-4 md:px-5 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${activeFilter === status ? 'bg-white dark:bg-[#1A1A1A] text-black dark:text-white shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)]' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
                     >
                       {status}
                     </button>
@@ -117,12 +138,12 @@ export default function OrderHistory() {
                 </div>
 
                 {/* Advanced Actions */}
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                  <div className="relative flex-1 md:w-64">
+                <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full lg:w-auto">
+                  <div className="relative w-full sm:w-64">
                     <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <input value={search} onChange={event => setSearch(event.target.value)} type="text" placeholder="Search Order ID or Market..." className="w-full bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500/50 transition-colors shadow-inner" />
                   </div>
-                  <button onClick={() => exportCsv('tradex-orders.csv', searchedOrders)} className="px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
+                  <button onClick={() => exportCsv('tradex-orders.csv', searchedOrders)} className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     CSV
                   </button>
@@ -130,17 +151,18 @@ export default function OrderHistory() {
               </div>
 
               {/* The Table */}
-              <div className="overflow-x-auto p-4 sm:p-8">
-                <table className="w-full text-left border-collapse min-w-[1100px]">
+              {/* FIXED: added w-full here to ensure containment */}
+              <div className="overflow-x-auto w-full no-scrollbar p-0 sm:p-4 md:p-8">
+                <table className="w-full text-left border-collapse min-w-[900px] md:min-w-[1100px]">
                   <thead>
                     <tr className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-black/5 dark:border-white/[0.05]">
-                      <th className="pb-6 pl-4 font-medium w-[15%]">Time / ID</th>
-                      <th className="pb-6 font-medium w-[15%]">Market</th>
-                      <th className="pb-6 font-medium w-[10%]">Type</th>
-                      <th className="pb-6 font-medium text-right w-[15%]">Price</th>
-                      <th className="pb-6 font-medium text-right w-[15%]">Amount / Total</th>
-                      <th className="pb-6 font-medium text-center w-[15%]">Status</th>
-                      <th className="pb-6 pr-4 font-medium text-right w-[10%]">Fee</th>
+                      <th className="py-4 md:pb-6 pl-4 md:pl-6 font-medium w-[15%]">Time / ID</th>
+                      <th className="py-4 md:pb-6 font-medium w-[15%]">Market</th>
+                      <th className="py-4 md:pb-6 font-medium w-[10%]">Type</th>
+                      <th className="py-4 md:pb-6 font-medium text-right w-[15%]">Price</th>
+                      <th className="py-4 md:pb-6 font-medium text-right w-[15%]">Amount / Total</th>
+                      <th className="py-4 md:pb-6 font-medium text-center w-[15%]">Status</th>
+                      <th className="py-4 md:pb-6 pr-4 md:pr-6 font-medium text-right w-[10%]">Fee</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm">
@@ -157,14 +179,14 @@ export default function OrderHistory() {
                         >
                           
                           {/* Time & ID */}
-                          <td className="py-6 pl-4 rounded-l-2xl">
+                          <td className="py-4 md:py-6 pl-4 md:pl-6 rounded-l-2xl">
                             <p className="font-mono font-bold text-sm mb-1">{order.time}</p>
                             <p className="text-[10px] text-zinc-500 font-mono tracking-wider">{order.date} · {order.id}</p>
                           </td>
                           
                           {/* Market & Side */}
-                          <td className="py-6">
-                            <div className="flex items-center gap-3">
+                          <td className="py-4 md:py-6">
+                            <div className="flex items-center gap-2 md:gap-3">
                               <span className={`text-[10px] font-bold px-2 py-1 rounded bg-black/5 dark:bg-white/10 ${order.side === 'BUY' ? 'text-emerald-500' : 'text-rose-500'}`}>
                                 {order.side}
                               </span>
@@ -173,37 +195,37 @@ export default function OrderHistory() {
                           </td>
 
                           {/* Order Type */}
-                          <td className="py-6 text-zinc-600 dark:text-zinc-400 font-medium">
+                          <td className="py-4 md:py-6 text-zinc-600 dark:text-zinc-400 font-medium">
                             {order.type}
                           </td>
 
                           {/* Executed Price */}
-                          <td className="py-6 text-right font-mono font-bold text-base">
+                          <td className="py-4 md:py-6 text-right font-mono font-bold text-base">
                             {order.price}
                           </td>
 
                           {/* Amount & Total Notional */}
-                          <td className="py-6 text-right">
+                          <td className="py-4 md:py-6 text-right">
                             <p className="font-mono font-medium text-sm mb-1 text-zinc-600 dark:text-zinc-300">{order.size}</p>
                             <p className="text-xs font-mono font-bold">{order.total}</p>
                           </td>
 
                           {/* Status Badge */}
-                          <td className="py-6 text-center">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest border ${
+                          <td className="py-4 md:py-6 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] md:text-[11px] font-bold uppercase tracking-widest border ${
                               order.status === 'Filled' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 
                               order.status === 'Pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 
                               'bg-zinc-500/10 text-zinc-500 border-zinc-500/20'
                             }`}>
-                              {order.status === 'Filled' && <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                              {order.status === 'Pending' && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
-                              {order.status === 'Canceled' && <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>}
+                              {order.status === 'Filled' && <svg className="w-3 h-3 hidden sm:block" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                              {order.status === 'Pending' && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse hidden sm:block" />}
+                              {order.status === 'Canceled' && <svg className="w-3 h-3 hidden sm:block" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>}
                               {order.status}
                             </span>
                           </td>
 
                           {/* Fee */}
-                          <td className="py-6 pr-4 rounded-r-2xl text-right font-mono text-xs text-zinc-500">
+                          <td className="py-4 md:py-6 pr-4 md:pr-6 rounded-r-2xl text-right font-mono text-xs text-zinc-500">
                             {order.fee}
                           </td>
                         </motion.tr>
@@ -213,25 +235,25 @@ export default function OrderHistory() {
                 </table>
                 
                 {searchedOrders.length === 0 && (
-                  <div className="py-20 text-center flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-4">
-                      <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <div className="py-12 md:py-20 text-center flex flex-col items-center justify-center px-4">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-4">
+                      <svg className="w-6 h-6 md:w-8 md:h-8 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     </div>
-                    <p className="text-lg font-bold text-zinc-400">No orders found.</p>
-                    <p className="text-sm text-zinc-600 mt-1">Try adjusting your filters.</p>
+                    <p className="text-base md:text-lg font-bold text-zinc-400">No orders found.</p>
+                    <p className="text-xs md:text-sm text-zinc-600 mt-1">Try adjusting your filters.</p>
                   </div>
                 )}
               </div>
               
               {/* Pagination / Footer */}
-              <div className="p-6 border-t border-black/5 dark:border-white/[0.05] flex justify-between items-center bg-black/[0.01] dark:bg-white/[0.01]">
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Showing {searchedOrders.length} records</p>
+              <div className="p-4 md:p-6 border-t border-black/5 dark:border-white/[0.05] flex justify-between items-center bg-black/[0.01] dark:bg-white/[0.01]">
+                <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Showing {searchedOrders.length} records</p>
                 <div className="flex gap-2">
-                  <button className="w-8 h-8 rounded-lg flex items-center justify-center border border-black/10 dark:border-white/10 text-zinc-500 hover:text-white transition-colors disabled:opacity-50" disabled>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                  <button className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center border border-black/10 dark:border-white/10 text-zinc-500 hover:text-white transition-colors disabled:opacity-50" disabled>
+                    <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                   </button>
-                  <button className="w-8 h-8 rounded-lg flex items-center justify-center border border-black/10 dark:border-white/10 text-zinc-500 hover:text-black dark:hover:text-white transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  <button className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center border border-black/10 dark:border-white/10 text-zinc-500 hover:text-black dark:hover:text-white transition-colors">
+                    <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                   </button>
                 </div>
               </div>

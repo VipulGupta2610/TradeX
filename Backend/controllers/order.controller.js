@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import orders from "../schemas/orders.schema.js";
 import positions from "../schemas/positions.schema.js";
 import User from "../schemas/user.schema.js";
-import trades from "../schemas/tradeHis.schema.js"; // <-- 1. IMPORT THE NEW TRADES SCHEMA
+import trades from "../schemas/tradeHis.schema.js"; 
 
 const roundMoney = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -103,7 +103,6 @@ const executeOrder = async order => {
         }
 
         // 2. CALCULATE REALIZED PNL
-        // (Exit Price - Entry Price) * Quantity sold
         const realizedPnl = roundMoney((executionPrice - position.avgPrice) * order.quantity);
 
         try {
@@ -121,8 +120,9 @@ const executeOrder = async order => {
                 exitPrice: executionPrice,
                 quantity: order.quantity,
                 realizedPnl: realizedPnl,
-                openedAt: position.createdAt, // Tracks when the position was initially established
-                closedAt: new Date()
+                openedAt: position.createdAt, 
+                closedAt: new Date(),
+                aiMetrics: order.aiMetrics // <-- Captures the AI metrics logged at the time of the sell order
             });
 
         } catch (error) {
@@ -159,9 +159,10 @@ const getTradingState = async userid => {
 export const newOrder = async (req,res)=>{
     let order;
     try {
+        // --- EXTRACT aiMetrics FROM req.body ---
         const {
             userid, symbol, name, exchange, ordertype, side, product,
-            validity, quantity, price, marketPrice
+            validity, quantity, price, marketPrice, aiMetrics 
         } = req.body;
 
         if (!mongoose.isValidObjectId(userid)) {
@@ -198,7 +199,8 @@ export const newOrder = async (req,res)=>{
             validity: validity || "DAY",
             quantity: normalizedQuantity,
             price: normalizedPrice,
-            marketPrice: normalizedMarketPrice
+            marketPrice: normalizedMarketPrice,
+            aiMetrics: aiMetrics || null // <-- Save the metrics to the database
         });
 
         if (isExecutable(order)) order = await executeOrder(order);
