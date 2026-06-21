@@ -174,11 +174,12 @@ function DonutChart({ used, total, color = '#6366f1', size = 100, stroke = 14 })
 export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [bugReports, setBugReports] = useState([]); 
-  const [apiData, setApiData] = useState({
+const [apiData, setApiData] = useState({
     totalUsers: 0,
     totalOrders: 0,
     todayOrdersCount: 0,
-    todayOrders: []
+    todayOrders: [],
+    allUsers: [] // <-- Add this property
   });
 
   const [chartData, setChartData] = useState({
@@ -626,7 +627,66 @@ export default function AdminDashboard() {
               </div>
             </Card>
           </div>
-
+{/* ── NEW ROW: All Users Details ── */}
+          <div style={{ marginTop: 16 }}>
+            <Card style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>User Database</span>
+                <span style={{ fontSize: 11, color: '#6b7280', cursor: 'pointer' }}>Export CSV</span>
+              </div>
+              <div style={{ overflowX: 'auto', maxHeight: '400px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600, fontSize: 12 }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(15,22,35,0.95)', backdropFilter: 'blur(8px)' }}>
+                      {['User ID', 'Name / Email', 'Status', 'Joined Date'].map(h => (
+                        <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 10, color: '#4b5563', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <AnimatePresence>
+                      {apiData.allUsers?.length > 0 ? (
+                        apiData.allUsers.map((user, idx) => (
+                          <motion.tr
+                            key={user._id}
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.02 * idx }}
+                            style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#d1d5db' }}>{user._id}</td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <p style={{ fontWeight: 700, color: 'white', margin: 0 }}>{user.name || 'Unknown User'}</p>
+                              <p style={{ fontSize: 11, color: '#9ca3af', margin: 0 }}>{user.email || 'No email provided'}</p>
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{
+                                display: 'inline-block', padding: '3px 8px', borderRadius: 5,
+                                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                color: '#10b981',
+                                border: '1px solid rgba(16, 185, 129, 0.2)',
+                              }}>Active</span>
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#9ca3af', fontSize: 11 }}>
+                              {formatDate(user.createdAt)}
+                            </td>
+                          </motion.tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '24px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                            No users found in the database.
+                          </td>
+                        </tr>
+                      )}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
         </div>
       </main>
     </div>

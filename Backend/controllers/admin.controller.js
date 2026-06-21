@@ -7,6 +7,9 @@ export const Number_of_users = async (req, res) => {
         const totalUsers = await User.countDocuments();
         const totalOrders = await Order.countDocuments();
 
+        // Fetch all user details
+        const allUsers = await User.find().sort({ createdAt: -1 });
+
         // Today's date range
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
@@ -27,7 +30,8 @@ export const Number_of_users = async (req, res) => {
             totalUsers,
             totalOrders,
             todayOrdersCount,
-            todayOrders
+            todayOrders,
+            allUsers // <-- Added this to the response
         });
 
     } catch (error) {
@@ -66,3 +70,4 @@ export const delete_bug = async (req  , res)=>{
         return res.status(500).json({message:"Internal server error",error})
     }
 }
+

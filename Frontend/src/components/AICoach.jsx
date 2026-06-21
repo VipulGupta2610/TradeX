@@ -103,9 +103,9 @@ export default function AICoach() {
         <main className="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12 py-12">
           
           {/* Theme Toggle in Header Area */}
-          <div className="flex justify-end mb-4">
+          {/* <div className="flex justify-end mb-4">
             <ThemeToggle />
-          </div>
+          </div> */}
 
           <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
             

@@ -24,6 +24,7 @@ import AccountSettings from './components/AccountSettings';
 import NotFound from './components/NotFound';
 import AdminDashboard from "./components/AdminDashboard";
 import BugReport from "./components/BugReport";
+import AdminLogin from "./components/AdminLogin";
 
 const router = createBrowserRouter([{
     path:"/",
@@ -68,6 +69,10 @@ const router = createBrowserRouter([{
       {
         path:"/TradeHistory",
         element:<TradeHistory/>
+      },
+      {
+        path:"/AdminLogin",
+        element:<AdminLogin/>
       },
       {
         path:"/BugReport",

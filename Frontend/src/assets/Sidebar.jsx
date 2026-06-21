@@ -22,7 +22,7 @@ function Sidebar() {
     // ['Market Explorer', '/MarketExplorer'],
     // ['Leaderboard', '/Leaderboard'],
     // ['Challenges', '/Challenges'],
-    // ['AI Coach', '/AICoach'],
+    ['AI Coach', '/AICoach'],
     // ['Learning Center', '/LearningCenter'],
     ['Subscription', '/Subscription'],
     ['Report a Bug', '/BugReport'],
