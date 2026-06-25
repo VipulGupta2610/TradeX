@@ -27,6 +27,10 @@ export default function AICoach() {
   });
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  
+  // Track how many messages the user has sent in the current session
+  const [sessionQueryCount, setSessionQueryCount] = useState(0); 
+
   const user = useSelector(state => state.auth.user);
   const { positions, orders, metrics } = useTradingAccount(user?._id);
 
@@ -43,12 +47,22 @@ export default function AICoach() {
     setInputValue('');
     setIsTyping(true);
 
+    // Check if this is a follow-up question
+    const isFollowUp = sessionQueryCount >= 1;
+    setSessionQueryCount((prev) => prev + 1);
+
     setTimeout(() => {
       setIsTyping(false);
+      
+      // Determine the AI's response based on the query count
+      const aiResponseText = isFollowUp 
+        ? "This feature is currently under construction. 🚧" 
+        : `Your live paper account has ${positions.length} open position${positions.length === 1 ? '' : 's'}, ${orders.filter(order => order.status === 'OPEN').length} pending order${orders.filter(order => order.status === 'OPEN').length === 1 ? '' : 's'}, and ${metrics.unrealizedPnl >= 0 ? 'an unrealized gain' : 'an unrealized loss'} of ₹${Math.abs(metrics.unrealizedPnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}. Keep position size aligned with your available cash of ₹${metrics.totalEquity.toLocaleString('en-IN', { maximumFractionDigits: 2 })}.`;
+
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,
         sender: 'ai',
-        text: `Your live paper account has ${positions.length} open position${positions.length === 1 ? '' : 's'}, ${orders.filter(order => order.status === 'OPEN').length} pending order${orders.filter(order => order.status === 'OPEN').length === 1 ? '' : 's'}, and ${metrics.unrealizedPnl >= 0 ? 'an unrealized gain' : 'an unrealized loss'} of ₹${Math.abs(metrics.unrealizedPnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}. Keep position size aligned with your available cash of ₹${metrics.totalEquity.toLocaleString('en-IN', { maximumFractionDigits: 2 })}.`,
+        text: aiResponseText,
         time: 'Just now'
       }]);
     }, 800);
@@ -75,7 +89,6 @@ export default function AICoach() {
       <div className="flex-1 relative overflow-y-auto overflow-x-hidden">
         
         {/* --- NEURAL CORE BACKGROUND --- */}
-        {/* Removed 'fixed' and mapped background color to transition properly */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-[#FAFAFA] dark:bg-[#020202] transition-colors duration-500">
           
           {/* Pulsing Central AI Core */}
@@ -102,11 +115,6 @@ export default function AICoach() {
         {/* --- MAIN CONTENT AREA --- */}
         <main className="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12 py-12">
           
-          {/* Theme Toggle in Header Area */}
-          {/* <div className="flex justify-end mb-4">
-            <ThemeToggle />
-          </div> */}
-
           <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
             
             {/* HEADER SECTION */}
