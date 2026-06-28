@@ -12,9 +12,11 @@ import userRoutes from "../Backend/routes/user.route.js";
 import marketRoutes from "../Backend/routes/market.route.js";
 import adminRoutes from "../Backend/routes/admin.route.js";
 import { startMarketData } from "./services/marketDataService.js";
+import Redis from "ioredis";
 
 const app    = express();
 const server = http.createServer(app);
+export const redis = new Redis(process.env.REDIS_URL)
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
