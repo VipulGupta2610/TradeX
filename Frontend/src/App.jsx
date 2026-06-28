@@ -25,6 +25,7 @@ import NotFound from './components/NotFound';
 import AdminDashboard from "./components/AdminDashboard";
 import BugReport from "./components/BugReport";
 import AdminLogin from "./components/AdminLogin";
+import ForgotPassword from "./components/ForgotPassword";
 
 const router = createBrowserRouter([{
     path:"/",
@@ -69,6 +70,10 @@ const router = createBrowserRouter([{
       {
         path:"/TradeHistory",
         element:<TradeHistory/>
+      },
+      {
+        path:"/ForgotPassword",
+        element:<ForgotPassword/>
       },
       {
         path:"/AdminLogin",
