@@ -7,6 +7,7 @@ import { cancelOrder, getMyOrders, newOrder, processOrders } from "../controller
 // Import the new trade journal controllers
 import { getMyJournal, updateTradeJournal } from "../controllers/tradeHis.controller.js";
 import { report_bug } from "../controllers/bugReport.controller.js";
+import { Limiter } from "../middlewares/RateLimiter.js";
 
 const router = express.Router()
 
@@ -42,6 +43,6 @@ router.patch("/Trades/:tradeid", updateTradeJournal)
 router.post("/BugReport",report_bug)
 
 // Password changing
-router.post("/ForgotPassword",otp_for_reset_password)
+router.post("/ForgotPassword",Limiter,otp_for_reset_password)
 
 export default router;
