@@ -76,6 +76,9 @@ export const otp_for_reset_password = async (req, res) => {
         if (!isExist) {
             return res.status(400).json({ message: "User not signuped" })
         }
+        if (!isExist.isPass){
+            return res.status(429).json({message:"No password needed Login with google"})
+        }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         await redis.set(`otp:${email}`, otp, "EX", 600)
         const message="Use this OTP to reset passsword.. This OTP will expire in 10min";
@@ -96,6 +99,7 @@ export const otp_for_reset_password = async (req, res) => {
         return res.status(500).json({message:"Internal Server error",error})
     }
 }
+
 
 export const updateProfile = async (req, res) => {
     try {

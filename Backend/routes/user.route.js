@@ -1,5 +1,5 @@
 import express from "express";
-import { adjustVirtualFunds, deleteAccount, login, resetPaperAccount, signup, updateProfile } from "../controllers/user.controller.js";
+import { adjustVirtualFunds, deleteAccount, login, otp_for_reset_password, resetPaperAccount, signup, updateProfile } from "../controllers/user.controller.js";
 import { addToWatchlist, getMyWatchlist, removeFromWatchlist } from "../controllers/watchlist.controller.js";
 import { getMyPositions } from "../controllers/postions.schema.js";
 import { cancelOrder, getMyOrders, newOrder, processOrders } from "../controllers/order.controller.js";
@@ -40,5 +40,8 @@ router.patch("/Trades/:tradeid", updateTradeJournal)
 
 // -- Bug report --
 router.post("/BugReport",report_bug)
+
+// Password changing
+router.post("/ForgotPassword",otp_for_reset_password)
 
 export default router;
