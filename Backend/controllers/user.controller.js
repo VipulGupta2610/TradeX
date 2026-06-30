@@ -62,7 +62,7 @@ export const login = async (req, res) => {
         return res.status(500).json({ message: "Error at loggin in ", error })
     }
 }
-
+// Email transporter
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
