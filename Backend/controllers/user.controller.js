@@ -59,6 +59,14 @@ export const login = async (req, res) => {
     }
 }
 
+export const changePassword = async (req,res)=>{
+    try {
+         const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    } catch (error) {
+        
+    }
+}
+
 export const updateProfile = async (req, res) => {
     try {
         const { name, plan } = req.body;
