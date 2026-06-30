@@ -11,7 +11,7 @@ import axios from 'axios';
 
 export default function SignupUltra() {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ email: '', name: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', name: '',isPass:true, password: '' });
   const [focusedInput, setFocusedInput] = useState(null);
 
   const { handleSubmit, formState: { isSubmitting } } = useForm();
@@ -243,7 +243,7 @@ const dispatch = useDispatch()
                     </div>
 
                     <motion.button
-                      type='submit'
+                      type='button'
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setStep(2)}
                       disabled={!formData.email}
@@ -314,6 +314,7 @@ const dispatch = useDispatch()
                         Back
                       </button>
                       <motion.button
+                      type='submit'
                         whileTap={{ scale: 0.98 }}
                         disabled={!formData.name ||  !formData.password}
                         className="flex-1 bg-white text-black font-bold text-sm py-4 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-zinc-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.1)]"

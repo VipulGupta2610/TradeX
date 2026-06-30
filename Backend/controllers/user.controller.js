@@ -21,7 +21,9 @@ export const signup = async (req, res) => {
                 name, email, isPass: true, password: hashpass
             })
             await newUser.save()
-            const sending_user = await newUser.select("-password")
+            const sending_user = await user
+                .findById(newUser._id)
+                .select("-password");
             return res.status(200).json({ message: 'User created successfully', sending_user })
         }
         else {
@@ -76,19 +78,19 @@ export const otp_for_reset_password = async (req, res) => {
         if (!isExist) {
             return res.status(400).json({ message: "User not signuped" })
         }
-        if (!isExist.isPass){
-            return res.status(429).json({message:"No password needed Login with google"})
+        if (!isExist.isPass) {
+            return res.status(429).json({ message: "No password needed Login with google" })
         }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         await redis.set(`otp:${email}`, otp, "EX", 600)
-        const message="Use this OTP to reset passsword.. This OTP will expire in 10min";
+        const message = "Use this OTP to reset passsword.. This OTP will expire in 10min";
         try {
             await transporter.sendMail({
-                to:email,
-                subject:"OTP for reseting password",
-                html:message
+                to: email,
+                subject: "OTP for reseting password",
+                html: message
             })
-            return res.status(200).json({message:"OTP sent to registerd email"})
+            return res.status(200).json({ message: "OTP sent to registerd email" })
         } catch (error) {
             console.log("Error at internal tryCatch of change Password")
             console.log(error)
@@ -96,7 +98,7 @@ export const otp_for_reset_password = async (req, res) => {
     } catch (error) {
         console.log("Error at otp for password chnaging")
         console.log(error)
-        return res.status(500).json({message:"Internal Server error",error})
+        return res.status(500).json({ message: "Internal Server error", error })
     }
 }
 

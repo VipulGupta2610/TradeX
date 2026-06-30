@@ -10,7 +10,8 @@ const userSchema = mongoose.Schema({
     },
     isPass:{
         type:Boolean,
-        required:true
+        required:true,
+        default:true
     },
     password:{
         type:String,
