@@ -20,7 +20,7 @@ export default function ForgotPassword() {
     setTimeout(() => {
       setIsProcessing(false);
       // Navigate to OTP page and pass the email in state
-      navigate('/verify-otp', { state: { email } });
+      navigate('/VerifyOTP', { state: { email } });
     }, 1500);
   };
 
