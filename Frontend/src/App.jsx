@@ -26,6 +26,7 @@ import AdminDashboard from "./components/AdminDashboard";
 import BugReport from "./components/BugReport";
 import AdminLogin from "./components/AdminLogin";
 import ForgotPassword from "./components/ForgotPassword";
+import VerifyOTP from "./components/VerifyOTP";
 
 const router = createBrowserRouter([{
     path:"/",
@@ -74,6 +75,10 @@ const router = createBrowserRouter([{
       {
         path:"/ForgotPassword",
         element:<ForgotPassword/>
+      },
+      {
+        path:"/VerifyOTP",
+        element:<VerifyOTP/>
       },
       {
         path:"/AdminLogin",
