@@ -86,7 +86,7 @@ export const otp_for_reset_password = async (req, res) => {
         }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         await redis.set(`otp:${email}`, otp, "EX", 600)
-       const message = `
+        const message = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
     <h2 style="color: #2563eb;">TradeX Password Reset</h2>
 
@@ -138,6 +138,27 @@ export const otp_for_reset_password = async (req, res) => {
         console.log("Error at otp for password chnaging")
         console.log(error)
         return res.status(500).json({ message: "Internal Server error", error })
+    }
+}
+
+export const veify_otp = async (req, res) => {
+    try {
+        const {email , otp} = req.body;
+        const cached_otp = await redis.get(`otp:${email}`)
+        if (!cached_otp){
+            return res.status(429).json({message:"OTP expired"})
+        }
+        if (cached_otp == otp){
+            await redis.del(`otp:${email}`)
+            return res.status(200).json({message:"OTP matched"})
+        }
+      
+            return res.status(500).json({message:"OTP didn't matched"})
+       
+    } catch (error) {
+console.log("Error at otp verification")
+console.log(error)
+return res.status(500).json({message:"Internal server error"})
     }
 }
 
