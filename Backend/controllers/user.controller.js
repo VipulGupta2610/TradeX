@@ -5,6 +5,9 @@ import positions from "../schemas/positions.schema.js";
 import watchlist from "../schemas/watchlist.schema.js";
 import { redis } from "../index.js";
 import nodemailer from "nodemailer"
+import dotenv from "dotenv"
+
+dotenv.config()
 
 export const signup = async (req, res) => {
     try {
@@ -83,7 +86,7 @@ export const otp_for_reset_password = async (req, res) => {
         }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         await redis.set(`otp:${email}`, otp, "EX", 600)
-        const message = "Use this OTP to reset passsword.. This OTP will expire in 10min";
+        const message = `${otp} is the otp for reseting password.Use this OTP to reset passsword.. This OTP will expire in 10min`;
         try {
             await transporter.sendMail({
                 to: email,
