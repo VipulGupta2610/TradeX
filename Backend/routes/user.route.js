@@ -1,5 +1,5 @@
 import express from "express";
-import { adjustVirtualFunds, deleteAccount, login, otp_for_reset_password, resetPaperAccount, signup, updateProfile, veify_otp } from "../controllers/user.controller.js";
+import { adjustVirtualFunds, deleteAccount, login, newPassword, otp_for_reset_password, resetPaperAccount, signup, updateProfile, veify_otp } from "../controllers/user.controller.js";
 import { addToWatchlist, getMyWatchlist, removeFromWatchlist } from "../controllers/watchlist.controller.js";
 import { getMyPositions } from "../controllers/postions.schema.js";
 import { cancelOrder, getMyOrders, newOrder, processOrders } from "../controllers/order.controller.js";
@@ -45,5 +45,6 @@ router.post("/BugReport",report_bug)
 // Password changing
 router.post("/ForgotPassword",Limiter,otp_for_reset_password)
 router.post("/ForgotPassword/verify-otp",veify_otp)
+router.post("/ForgotPassword/reset-password",newPassword)
 
 export default router;
