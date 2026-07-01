@@ -143,22 +143,22 @@ export const otp_for_reset_password = async (req, res) => {
 
 export const veify_otp = async (req, res) => {
     try {
-        const {email , otp} = req.body;
+        const { email, otp } = req.body;
         const cached_otp = await redis.get(`otp:${email}`)
-        if (!cached_otp){
-            return res.status(429).json({message:"OTP expired"})
+        if (!cached_otp) {
+            return res.status(429).json({ message: "OTP expired" })
         }
-        if (cached_otp == otp){
+        if (cached_otp == otp) {
             await redis.del(`otp:${email}`)
-            return res.status(200).json({message:"OTP matched"})
+            return res.status(200).json({ message: "OTP matched" })
         }
-      
-            return res.status(500).json({message:"OTP didn't matched"})
-       
+
+        return res.status(500).json({ message: "OTP didn't matched" })
+
     } catch (error) {
-console.log("Error at otp verification")
-console.log(error)
-return res.status(500).json({message:"Internal server error"})
+        console.log("Error at otp verification")
+        console.log(error)
+        return res.status(500).json({ message: "Internal server error" })
     }
 }
 
@@ -182,6 +182,14 @@ export const updateProfile = async (req, res) => {
         return res.status(500).json({ message: "Unable to update profile" });
     }
 };
+
+export const newPassword = async (req , res)=>{
+    try {
+        
+    } catch (error) {
+        
+    }
+}
 
 export const resetPaperAccount = async (req, res) => {
     try {
