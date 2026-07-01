@@ -162,6 +162,36 @@ export const veify_otp = async (req, res) => {
     }
 }
 
+export const newPassword = async (req, res) => {
+    try {
+        const { email, new_pass } = req.body;
+          if (!new_pass || new_pass.length < 6) {
+            return res.status(400).json({
+                message: "Password must contain at least 6 characters"
+            });
+        }
+
+        const hash_pass = await bcryptjs.hash(new_pass, 10);
+        const c_user = await user.findOneAndUpdate({ email }, { password: hash_pass }, { new: true }).select("-password")
+        if (!c_user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        return res.status(200).json({
+            message: "Password changed successfully",
+            user: c_user
+        });
+    } catch (error) {
+        console.log("Error at newPassword");
+        console.log(error);
+
+        return res.status(500).json({
+            message: "Internal Server Error"
+        });
+    }
+}
 
 export const updateProfile = async (req, res) => {
     try {
@@ -183,30 +213,6 @@ export const updateProfile = async (req, res) => {
     }
 };
 
-export const newPassword = async (req, res) => {
-    try {
-        const { email, new_pass } = req.body;
-        const hash_pass = await bcryptjs.hash(password, 10);
-        const c_user = await user.findOneAndUpdate({ email }, { password: hash_pass }, { new: true }).select("-password")
-        if (!c_user) {
-            return res.status(404).json({
-                message: "User not found"
-            });
-        }
-
-        return res.status(200).json({
-            message: "Password changed successfully",
-            user: c_user
-        });
-    } catch (error) {
-        console.log("Error at newPassword");
-        console.log(error);
-
-        return res.status(500).json({
-            message: "Internal Server Error"
-        });
-    }
-}
 
 export const resetPaperAccount = async (req, res) => {
     try {
