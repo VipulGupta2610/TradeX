@@ -86,7 +86,43 @@ export const otp_for_reset_password = async (req, res) => {
         }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         await redis.set(`otp:${email}`, otp, "EX", 600)
-        const message = `${otp} is the otp for reseting password.Use this OTP to reset passsword.. This OTP will expire in 10min`;
+       const message = `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+    <h2 style="color: #2563eb;">TradeX Password Reset</h2>
+
+    <p>Hello,</p>
+
+    <p>Use the following OTP to reset your password:</p>
+
+    <div style="
+        background: #f3f4f6;
+        border: 2px dashed #2563eb;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        margin: 20px 0;
+    ">
+        <span style="
+            font-size: 36px;
+            font-weight: bold;
+            color: #2563eb;
+            letter-spacing: 8px;
+        ">
+            ${otp}
+        </span>
+    </div>
+
+    <p>This OTP will expire in <b>10 minutes</b>.</p>
+
+    <p>If you did not request a password reset, please ignore this email.</p>
+
+    <hr>
+
+    <p style="color: gray; font-size: 12px;">
+        © 2026 TradeX. All rights reserved.
+    </p>
+</div>
+`;
         try {
             await transporter.sendMail({
                 to: email,
