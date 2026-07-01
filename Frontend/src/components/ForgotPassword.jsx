@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '../api/axios';
 
 export default function ForgotPasswordOTP() {
   const [step, setStep] = useState(1); // 1: Email | 2: OTP | 3: New Password | 4: Success
@@ -7,6 +8,8 @@ export default function ForgotPasswordOTP() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [passwords, setPasswords] = useState({ new: '', confirm: '' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   // Refs for OTP inputs to handle auto-focus
   const otpRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
@@ -16,20 +19,28 @@ export default function ForgotPasswordOTP() {
   }, []);
 
   // --- Handlers ---
-  const handleEmailSubmit = (e) => {
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return;
-    setIsProcessing(true);
-    // Mock sending OTP
-    setTimeout(() => {
-      setIsProcessing(false);
+
+    try {
+      setIsProcessing(true);
+
+      const res = await api.post("/user/ForgotPassword", { email })
+
+      alert(res.data.message);
+
       setStep(2);
-    }, 1500);
+
+    } catch (err) {
+      alert(err.response?.data?.message || "Something went wrong");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleOtpChange = (index, value) => {
     if (isNaN(value)) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value.substring(value.length - 1); // Only take last char
     setOtp(newOtp);
@@ -46,26 +57,62 @@ export default function ForgotPasswordOTP() {
     }
   };
 
-  const handleOtpSubmit = (e) => {
+  const handleOtpSubmit = async (e) => {
     e.preventDefault();
-    if (otp.join('').length !== 6) return;
-    setIsProcessing(true);
-    // Mock verifying OTP
-    setTimeout(() => {
-      setIsProcessing(false);
+
+    const enteredOtp = otp.join("");
+
+    if (enteredOtp.length !== 6) return;
+
+    try {
+      setIsProcessing(true);
+
+      const res = await api.post(
+        "/user/ForgotPassword/verify-otp",
+        {
+          email,
+          otp: enteredOtp
+        }
+      );
+
+      alert(res.data.message);
+
       setStep(3);
-    }, 1500);
+
+    } catch (err) {
+      alert(err.response?.data?.message || "OTP verification failed");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    if (!passwords.new || passwords.new !== passwords.confirm) return;
-    setIsProcessing(true);
-    // Mock saving password
-    setTimeout(() => {
-      setIsProcessing(false);
+
+    if (passwords.new !== passwords.confirm) {
+      return alert("Passwords do not match");
+    }
+
+    try {
+      setIsProcessing(true);
+
+      const res = await api.post(
+        "/user/ForgotPassword/reset-password",
+        {
+          email,
+          new_pass: passwords.new
+        }
+      );
+
+      alert(res.data.message);
+
       setStep(4);
-    }, 1500);
+
+    } catch (err) {
+      alert(err.response?.data?.message || "Unable to reset password");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // --- Animation Variants ---
@@ -77,21 +124,21 @@ export default function ForgotPasswordOTP() {
 
   return (
     <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-cyan-500/30 relative flex items-center justify-center overflow-hidden">
-      
+
       {/* --- CRYPTOGRAPHIC VAULT BACKGROUND --- */}
       <div className="absolute inset-0 z-0 pointer-events-none fixed bg-[#020202]">
         {/* Secure Scanner Gradients */}
-        <motion.div 
-          animate={{ x: ['-50%', '50%', '-50%'], opacity: [0.1, 0.2, 0.1] }} 
+        <motion.div
+          animate={{ x: ['-50%', '50%', '-50%'], opacity: [0.1, 0.2, 0.1] }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[80vw] h-[30vw] max-w-[1000px] max-h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.15),transparent_60%)] blur-[100px]" 
+          className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[80vw] h-[30vw] max-w-[1000px] max-h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.15),transparent_60%)] blur-[100px]"
         />
-        <motion.div 
-          animate={{ opacity: [0.05, 0.1, 0.05], scale: [1, 1.1, 1] }} 
+        <motion.div
+          animate={{ opacity: [0.05, 0.1, 0.05], scale: [1, 1.1, 1] }}
           transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-[radial-gradient(circle,rgba(59,130,246,0.1),transparent_60%)] blur-[120px]" 
+          className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-[radial-gradient(circle,rgba(59,130,246,0.1),transparent_60%)] blur-[120px]"
         />
-        
+
         {/* Hardware Security Grid */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_30%,transparent_100%)]" />
         <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
@@ -108,7 +155,7 @@ export default function ForgotPasswordOTP() {
       {/* --- RECOVERY CARD WRAPPER --- */}
       <div className="relative z-10 w-full max-w-[440px] px-6">
         <AnimatePresence mode="wait">
-          
+
           {/* ================= STEP 1: REQUEST EMAIL ================= */}
           {step === 1 && (
             <motion.div key="step1" variants={cardVariants} initial="hidden" animate="show" exit="exit" className="bg-[#0A0A0A]/80 backdrop-blur-3xl border border-white/[0.08] rounded-[32px] shadow-2xl overflow-hidden">
@@ -128,8 +175,8 @@ export default function ForgotPasswordOTP() {
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       </div>
-                      <input 
-                        type="email" 
+                      <input
+                        type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -139,8 +186,8 @@ export default function ForgotPasswordOTP() {
                     </div>
                   </div>
 
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isProcessing || !email}
                     className="w-full py-4 rounded-xl bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
@@ -164,7 +211,7 @@ export default function ForgotPasswordOTP() {
                     <svg className="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>
                   </div>
                   <h1 className="text-3xl font-black tracking-tight mb-2">Verify Identity</h1>
-                  <p className="text-sm text-zinc-400">We've sent a 6-digit verification code to <br/><span className="text-white font-bold">{email}</span></p>
+                  <p className="text-sm text-zinc-400">We've sent a 6-digit verification code to <br /><span className="text-white font-bold">{email}</span></p>
                 </div>
 
                 <form onSubmit={handleOtpSubmit} className="space-y-8">
@@ -183,8 +230,8 @@ export default function ForgotPasswordOTP() {
                     ))}
                   </div>
 
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isProcessing || otp.join('').length !== 6}
                     className="w-full py-4 rounded-xl bg-cyan-500 text-black font-bold text-sm hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-[0_0_20px_rgba(6,182,212,0.3)]"
                   >
@@ -217,30 +264,45 @@ export default function ForgotPasswordOTP() {
                 <form onSubmit={handlePasswordSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">New Password</label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       required
                       value={passwords.new}
-                      onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                      onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                       placeholder="••••••••••••"
                       className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm font-medium focus:outline-none focus:border-cyan-500/50 transition-colors shadow-inner"
                     />
                   </div>
+                  {
+                    passwords.new &&
+                    passwords.new.length < 8 && (
+                      <p className="text-xs text-red-400">
+                        Password must contain at least 8 characters.
+                      </p>
+                    )
+                  }
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">Confirm Password</label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       required
                       value={passwords.confirm}
-                      onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                      onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                       placeholder="••••••••••••"
                       className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm font-medium focus:outline-none focus:border-cyan-500/50 transition-colors shadow-inner"
                     />
                   </div>
-
-                  <button 
-                    type="submit" 
+                  {
+                    passwords.new &&
+                    passwords.new.length < 8 && (
+                      <p className="text-xs text-red-400">
+                        Password must contain at least 8 characters.
+                      </p>
+                    )
+                  }
+                  <button
+                    type="submit"
                     disabled={isProcessing || !passwords.new || passwords.new !== passwords.confirm}
                     className="w-full py-4 rounded-xl bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                   >
@@ -254,7 +316,7 @@ export default function ForgotPasswordOTP() {
           {/* ================= STEP 4: SUCCESS ================= */}
           {step === 4 && (
             <motion.div key="step4" variants={cardVariants} initial="hidden" animate="show" className="bg-emerald-500/5 backdrop-blur-3xl border border-emerald-500/20 rounded-[32px] shadow-[0_0_50px_rgba(16,185,129,0.1)] overflow-hidden text-center p-8 md:p-12">
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15 }}
@@ -262,13 +324,13 @@ export default function ForgotPasswordOTP() {
               >
                 <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </motion.div>
-              
+
               <h2 className="text-2xl font-black tracking-tight text-white mb-3">Password Updated</h2>
               <p className="text-sm text-zinc-400 leading-relaxed mb-8">
                 Your cryptographic keys have been rotated successfully. You can now access the terminal.
               </p>
-              
-              <a 
+
+              <a
                 href="/Login"
                 className="w-full inline-flex items-center justify-center py-4 rounded-xl bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-colors"
               >
