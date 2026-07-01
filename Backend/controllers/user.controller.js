@@ -153,7 +153,9 @@ export const veify_otp = async (req, res) => {
             return res.status(200).json({ message: "OTP matched" })
         }
 
-        return res.status(500).json({ message: "OTP didn't matched" })
+        return res.status(400).json({
+            message: "Invalid OTP"
+        });
 
     } catch (error) {
         console.log("Error at otp verification")
@@ -165,7 +167,7 @@ export const veify_otp = async (req, res) => {
 export const newPassword = async (req, res) => {
     try {
         const { email, new_pass } = req.body;
-          if (!new_pass || new_pass.length < 6) {
+        if (!new_pass || new_pass.length < 6) {
             return res.status(400).json({
                 message: "Password must contain at least 6 characters"
             });
