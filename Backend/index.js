@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import { Server } from "socket.io";
 import http from "http";
+import { scheduleIntradaySquareOff } from "./cron/squareOff.cron.js";
 
 // Load env vars FIRST before any other imports that may use them
 dotenv.config();
@@ -43,6 +44,7 @@ app.set("io", io);
 
 // Start live market data feeds
 startMarketData(io);
+scheduleIntradaySquareOff(io);
 
 // ── Express middleware ────────────────────────────────────────────────────
 app.use(cors({

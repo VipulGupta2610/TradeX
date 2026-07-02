@@ -351,13 +351,13 @@ function Toast({ message, type, onDone }) {
 }
 
 // ── ORDER DIALOG ──────────────────────────────────────────────────
-function OrderDialog({ sym, price, side, onClose, onConfirm }) {
-  const [qty, setQty] = useState("1");
+function OrderDialog({ sym, name, exch, price, side, product: initialProduct, qty: initialQty, onClose, onConfirm }) {
+  const [qty, setQty] = useState(initialQty ? String(initialQty) : "1");
   const [orderType, setOrderType] = useState("MARKET");
   const [limitPrice, setLimitPrice] = useState(fmt(price));
   const [slPrice, setSlPrice] = useState(fmt(side === "BUY" ? price * 0.98 : price * 1.02));
   const [target, setTarget] = useState(fmt(side === "BUY" ? price * 1.03 : price * 0.97));
-  const [product, setProduct] = useState("MIS");
+  const [product, setProduct] = useState(initialProduct || "MIS");
   const [validity] = useState("DAY");
   const [useSlTarget, setUseSlTarget] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -375,6 +375,8 @@ function OrderDialog({ sym, price, side, onClose, onConfirm }) {
     try {
       await onConfirm({
         sym,
+        name,
+        exch,
         side,
         qty: Number(qty),
         orderType,
@@ -403,9 +405,12 @@ function OrderDialog({ sym, price, side, onClose, onConfirm }) {
         </div>
         <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 13 }}>
           <div style={{ display: "flex", gap: 6 }}>
-            {["MIS", "CNC", "NRML"].map(p => (
+            {["MIS", "CNC"].map(p => (
               <button key={p} onClick={() => setProduct(p)} style={{ flex: 1, padding: "5px 0", borderRadius: 5, fontSize: 10.5, fontWeight: 700, border: `1px solid ${product === p ? "rgba(41,98,255,0.5)" : "rgba(255,255,255,0.07)"}`, background: product === p ? "rgba(41,98,255,0.12)" : "transparent", color: product === p ? "#7da8ff" : "#6b7280" }}>{p}</button>
             ))}
+          </div>
+          <div style={{ fontSize: 9, color: "#4b5563", marginTop: -6 }}>
+            {product === "MIS" ? "Intraday · 5x margin · auto square-off at close · shorting allowed" : "Delivery · full value · no leverage · must hold to sell"}
           </div>
           <div style={{ display: "flex", gap: 4 }}>
             {["MARKET", "LIMIT", "SL", "SL-M"].map(t => (
@@ -442,8 +447,8 @@ function OrderDialog({ sym, price, side, onClose, onConfirm }) {
             </div>
           </div>}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 6 }}>
-            <span style={{ fontSize: 10, color: "#6b7280" }}>Est. Value</span>
-            <span className="mono" style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 12 }}>₹{val.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+            <span style={{ fontSize: 10, color: "#6b7280" }}>{product === "MIS" ? "Est. Margin (5x)" : "Est. Value"}</span>
+            <span className="mono" style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 12 }}>₹{(product === "MIS" ? val / 5 : val).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
           </div>
           {submitError && <div style={{ fontSize: 10.5, color: "#f87171", padding: "7px 9px", borderRadius: 5, background: "rgba(242,54,69,0.08)", border: "1px solid rgba(242,54,69,0.18)" }}>{submitError}</div>}
           <div style={{ display: "flex", gap: 8 }}>
@@ -656,10 +661,10 @@ export default function TradingTerminal() {
 
   // Positions & orders
   const [positions, setPositions] = useState([
-    { sym: "RELIANCE", exch: "NSE", qty: 5, avg: 2850.00, side: "long" },
-    { sym: "TCS", exch: "NSE", qty: 3, avg: 3820.00, side: "long" },
-    { sym: "INFY", exch: "NSE", qty: 10, avg: 1780.00, side: "long" },
-    { sym: "HDFCBANK", exch: "NSE", qty: 8, avg: 1650.00, side: "long" },
+    { sym: "RELIANCE", exch: "NSE", qty: 5, avg: 2850.00, side: "long", product: "CNC" },
+    { sym: "TCS", exch: "NSE", qty: 3, avg: 3820.00, side: "long", product: "CNC" },
+    { sym: "INFY", exch: "NSE", qty: 10, avg: 1780.00, side: "long", product: "MIS" },
+    { sym: "HDFCBANK", exch: "NSE", qty: 8, avg: 1650.00, side: "long", product: "CNC" },
   ]);
   const [orders, setOrders] = useState([
     { id: "ORD001", sym: "INFY", exch: "NSE", type: "Limit", side: "BUY", qty: 10, price: 1800, status: "OPEN", time: "09:15", product: "MIS" },
@@ -876,7 +881,7 @@ export default function TradingTerminal() {
   const isUp = activeChgPct >= 0;
   const totalPnl = useMemo(() => positions.reduce((s, p) => {
     const lv = prices[p.sym] || { price: p.avg };
-    return s + (lv.price - p.avg) * p.qty * (p.side === "short" ? -1 : 1);
+    return s + (lv.price - p.avg) * p.qty;
   }, 0), [positions, prices]);
   const filtSym = useMemo(() => SYMBOLS.filter(s => !symSearch || s.sym.toLowerCase().includes(symSearch.toLowerCase()) || s.name.toLowerCase().includes(symSearch.toLowerCase())), [symSearch]);
 
@@ -1438,8 +1443,8 @@ const handleOrder = useCallback(async (order) => {
       body: JSON.stringify({
         userid: userId,
         symbol: order.sym,
-        name: activeSym.name,
-        exchange: activeSym.exch,
+        name: order.name || activeSym.name,
+        exchange: order.exch || activeSym.exch,
         ordertype: order.orderType,
         side: order.side,
         product: order.product,
@@ -1782,22 +1787,23 @@ const handleOrder = useCallback(async (order) => {
                   <div style={{ maxHeight: 170, overflowY: "auto" }}>
                     {bottomPanel === "pos" && (
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead><tr>{["Symbol", "Exchange", "Qty", "Avg", "LTP", "P&L", "P&L%", "Action"].map(h => <th key={h} className="t-head">{h}</th>)}</tr></thead>
+                        <thead><tr>{["Symbol", "Product", "Exchange", "Qty", "Avg", "LTP", "P&L", "P&L%", "Action"].map(h => <th key={h} className="t-head">{h}</th>)}</tr></thead>
                         <tbody>
                           {positions.map((p, i) => {
                             const lv = prices[p.sym] || { price: p.avg };
-                            const pnl = (lv.price - p.avg) * p.qty * (p.side === "short" ? -1 : 1);
-                            const pct = (pnl / (p.avg * p.qty)) * 100;
+                            const pnl = (lv.price - p.avg) * p.qty;
+                            const pct = (pnl / Math.abs(p.avg * p.qty)) * 100;
                             return <tr key={i} className="t-row">
                               <td className="t-cell" style={{ fontWeight: 600, color: "#f1f5f9" }}>{p.sym}</td>
+                              <td className="t-cell" style={{ fontSize: 9, color: p.product === "MIS" ? "#f59e0b" : "#6b7280", fontWeight: 700 }}>{p.product || "MIS"}</td>
                               <td className="t-cell" style={{ color: "#374151", fontSize: 9 }}>{p.exch}</td>
-                              <td className="t-cell mono">{p.qty}</td>
+                              <td className="t-cell mono">{Math.abs(p.qty)}</td>
                               <td className="t-cell mono" style={{ color: "#94a3b8" }}>₹{fmt(p.avg)}</td>
                               <td className="t-cell mono" style={{ fontWeight: 600 }}>₹{fmt(lv.price)}</td>
                               <td className="t-cell mono" style={{ color: pnl >= 0 ? "#089981" : "#f23645", fontWeight: 700 }}>{pnl >= 0 ? "+" : ""}₹{fmt(Math.abs(pnl))}</td>
                               <td className="t-cell mono" style={{ color: pct >= 0 ? "#089981" : "#f23645" }}>{pct.toFixed(2)}%</td>
                               <td className="t-cell"><div style={{ display: "flex", gap: 4 }}>
-                                <button onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setShowOrderDialog({ side: p.side === "long" ? "SELL" : "BUY", price: lv.price }); }} style={{ padding: "2px 8px", fontSize: 9, borderRadius: 3, background: "rgba(242,54,69,0.1)", border: "1px solid rgba(242,54,69,0.2)", color: "#f23645", fontWeight: 600 }}>Exit</button>
+                                <button onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setShowOrderDialog({ sym: p.sym, name: p.name, exch: p.exch, product: p.product, qty: Math.abs(p.qty), side: p.side === "long" ? "SELL" : "BUY", price: lv.price }); }} style={{ padding: "2px 8px", fontSize: 9, borderRadius: 3, background: "rgba(242,54,69,0.1)", border: "1px solid rgba(242,54,69,0.2)", color: "#f23645", fontWeight: 600 }}>Exit</button>
                                 <button onClick={() => setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym)} style={{ padding: "2px 8px", fontSize: 9, borderRadius: 3, border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>Chart</button>
                               </div></td>
                             </tr>;
@@ -2009,10 +2015,10 @@ const handleOrder = useCallback(async (order) => {
               <div style={{ fontWeight: 800, fontSize: 18, color: "#f1f5f9", marginBottom: 6 }}>Portfolio Overview</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
                 {[
-                  { l: "Total Invested", v: `₹${(positions.reduce((s, p) => s + p.avg * p.qty, 0) / 100000).toFixed(2)}L`, c: "#60a5fa" },
-                  { l: "Current Value", v: `₹${(positions.reduce((s, p) => s + (prices[p.sym]?.price || p.avg) * p.qty, 0) / 100000).toFixed(2)}L`, c: "#7da8ff" },
+                  { l: "Total Invested", v: `₹${(positions.reduce((s, p) => s + Math.abs(p.avg * p.qty), 0) / 100000).toFixed(2)}L`, c: "#60a5fa" },
+                  { l: "Current Value", v: `₹${(positions.reduce((s, p) => s + (prices[p.sym]?.price || p.avg) * Math.abs(p.qty), 0) / 100000).toFixed(2)}L`, c: "#7da8ff" },
                   { l: "Day P&L", v: `${totalPnl >= 0 ? "+" : ""}₹${fmt(Math.abs(totalPnl))}`, c: totalPnl >= 0 ? "#089981" : "#f23645" },
-                  { l: "Total Returns", v: `${totalPnl >= 0 ? "+" : ""}${((totalPnl / positions.reduce((s, p) => s + p.avg * p.qty, 0.01)) * 100).toFixed(2)}%`, c: totalPnl >= 0 ? "#089981" : "#f23645" },
+                  { l: "Total Returns", v: `${totalPnl >= 0 ? "+" : ""}${((totalPnl / positions.reduce((s, p) => s + Math.abs(p.avg * p.qty), 0.01)) * 100).toFixed(2)}%`, c: totalPnl >= 0 ? "#089981" : "#f23645" },
                 ].map(({ l, v, c }) => (
                   <div key={l} style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "14px 16px" }}>
                     <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{l}</div>
@@ -2026,9 +2032,9 @@ const handleOrder = useCallback(async (order) => {
                   {positions.map((p, i) => {
                     const lv = prices[p.sym] || { price: p.avg };
                     const pnl = (lv.price - p.avg) * p.qty;
-                    const pct = (pnl / (p.avg * p.qty)) * 100;
-                    const totalInvested = positions.reduce((s, x) => s + x.avg * x.qty, 0.01);
-                    const weight = (p.avg * p.qty / totalInvested) * 100;
+                    const pct = (pnl / Math.abs(p.avg * p.qty)) * 100;
+                    const totalInvested = positions.reduce((s, x) => s + Math.abs(x.avg * x.qty), 0.01);
+                    const weight = (Math.abs(p.avg * p.qty) / totalInvested) * 100;
                     const candles = candleStore[p.sym] || [];
                     const sparkData = candles.slice(-30).map(c => c.close);
                     return (
@@ -2036,7 +2042,7 @@ const handleOrder = useCallback(async (order) => {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                           <div>
                             <span style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>{p.sym}</span>
-                            <span style={{ fontSize: 9, color: "#374151", marginLeft: 5 }}>{p.qty} shares</span>
+                            <span style={{ fontSize: 9, color: "#374151", marginLeft: 5 }}>{Math.abs(p.qty)} shares</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                             <Sparkline data={sparkData} color={pnl >= 0 ? "#089981" : "#f23645"} />
@@ -2059,8 +2065,8 @@ const handleOrder = useCallback(async (order) => {
                 <div>
                   <div style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 16, marginBottom: 14 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, color: "#e2e8f0", marginBottom: 12 }}>Sector Allocation</div>
-                    {Object.entries(positions.reduce((acc, p) => { const sector = SYMBOLS.find(s => s.sym === p.sym)?.sector || "Other"; acc[sector] = (acc[sector] || 0) + p.avg * p.qty; return acc; }, {})).map(([sector, val], i) => {
-                      const total = positions.reduce((s, p) => s + p.avg * p.qty, 0.01);
+                    {Object.entries(positions.reduce((acc, p) => { const sector = SYMBOLS.find(s => s.sym === p.sym)?.sector || "Other"; acc[sector] = (acc[sector] || 0) + Math.abs(p.avg * p.qty); return acc; }, {})).map(([sector, val], i) => {
+                      const total = positions.reduce((s, p) => s + Math.abs(p.avg * p.qty), 0.01);
                       const pct = (val / total) * 100;
                       const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#f97316"];
                       return (
@@ -2261,28 +2267,32 @@ const handleOrder = useCallback(async (order) => {
               <div style={{ flex: 1, overflowY: "auto" }}>
                 {positions.map((p, i) => {
                   const lv = prices[p.sym] || { price: p.avg };
-                  const pnl = (lv.price - p.avg) * p.qty * (p.side === "short" ? -1 : 1);
-                  const pct = (pnl / (p.avg * p.qty)) * 100;
+                  const pnl = (lv.price - p.avg) * p.qty;
+                  const pct = (pnl / Math.abs(p.avg * p.qty)) * 100;
                   return (
                     <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <div>
                           <span style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>{p.sym}</span>
                           <span style={{ marginLeft: 6, padding: "1px 5px", borderRadius: 3, fontSize: 8.5, fontWeight: 700, background: p.side === "long" ? "rgba(8,153,129,0.15)" : "rgba(242,54,69,0.15)", color: p.side === "long" ? "#089981" : "#f23645" }}>{p.side.toUpperCase()}</span>
+                          <span style={{ marginLeft: 4, padding: "1px 5px", borderRadius: 3, fontSize: 8.5, fontWeight: 700, background: p.product === "MIS" ? "rgba(245,158,11,0.15)" : "rgba(96,165,250,0.15)", color: p.product === "MIS" ? "#f59e0b" : "#60a5fa" }}>{p.product || "MIS"}</span>
                         </div>
                         <span className="mono" style={{ fontSize: 11, color: pnl >= 0 ? "#089981" : "#f23645", fontWeight: 700 }}>{pnl >= 0 ? "+" : ""}₹{fmt(Math.abs(pnl))}</span>
                       </div>
                       <div style={{ fontSize: 10, color: "#6b7280", display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span>Qty:<span className="mono" style={{ color: "#94a3b8", marginLeft: 3 }}>{p.qty}</span></span>
+                        <span>Qty:<span className="mono" style={{ color: "#94a3b8", marginLeft: 3 }}>{Math.abs(p.qty)}</span></span>
                         <span>Avg:<span className="mono" style={{ color: "#94a3b8", marginLeft: 3 }}>₹{fmt(p.avg)}</span></span>
                         <span>LTP:<span className="mono" style={{ color: pnl >= 0 ? "#089981" : "#f23645", marginLeft: 3 }}>₹{fmt(lv.price)}</span></span>
                       </div>
+                      {p.product === "MIS" && p.margin != null && (
+                        <div style={{ fontSize: 9, color: "#4b5563", marginBottom: 6 }}>Margin used: <span className="mono" style={{ color: "#94a3b8" }}>₹{fmt(p.margin)}</span></div>
+                      )}
                       <div style={{ fontSize: 9.5, color: pct >= 0 ? "#089981" : "#f23645", fontWeight: 600, marginBottom: 5 }}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</div>
                       <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.06)", marginBottom: 6 }}>
                         <div style={{ height: "100%", borderRadius: 2, width: `${Math.min(Math.abs(pct) * 5, 100)}%`, background: pnl >= 0 ? "#089981" : "#f23645" }} />
                       </div>
                       <div style={{ display: "flex", gap: 4 }}>
-                        <button className="sell-btn" style={{ flex: 1, padding: "3px 0", fontSize: 10, borderRadius: 4 }} onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setShowOrderDialog({ side: p.side === "long" ? "SELL" : "BUY", price: lv.price }); }}>Exit</button>
+                        <button className="sell-btn" style={{ flex: 1, padding: "3px 0", fontSize: 10, borderRadius: 4 }} onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setShowOrderDialog({ sym: p.sym, name: p.name, exch: p.exch, product: p.product, qty: Math.abs(p.qty), side: p.side === "long" ? "SELL" : "BUY", price: lv.price }); }}>Exit</button>
                         <button style={{ flex: 1, padding: "3px 0", fontSize: 10, borderRadius: 4, border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280", fontWeight: 600 }} onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setMainView("chart"); }}>Chart</button>
                         <button style={{ flex: 0, padding: "3px 8px", fontSize: 10, borderRadius: 4, border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b" }} onClick={() => setShowAlertDialog(true)}>⊕</button>
                       </div>
@@ -2525,7 +2535,7 @@ const handleOrder = useCallback(async (order) => {
       </div>
 
       {/* ── DIALOGS ── */}
-      {showOrderDialog && <OrderDialog sym={activeSym.sym} price={showOrderDialog.price} side={showOrderDialog.side} onClose={() => setShowOrderDialog(null)} onConfirm={handleOrder} />}
+      {showOrderDialog && <OrderDialog sym={showOrderDialog.sym || activeSym.sym} name={showOrderDialog.name} exch={showOrderDialog.exch} price={showOrderDialog.price} side={showOrderDialog.side} product={showOrderDialog.product} qty={showOrderDialog.qty} onClose={() => setShowOrderDialog(null)} onConfirm={handleOrder} />}
       {showAlertDialog && <AlertDialog sym={activeSym.sym} price={activePrice} onClose={() => setShowAlertDialog(false)} onSet={(a) => { setAlerts(p => [...p, a]); addToast(`Alert set for ${a.sym} @ ₹${fmt(a.price)}`, "warning"); }} />}
       {showRiskCalc && <RiskCalc price={activePrice} onClose={() => setShowRiskCalc(false)} />}
 

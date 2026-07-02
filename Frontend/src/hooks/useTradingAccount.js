@@ -119,16 +119,17 @@ export function useTradingAccount(userid) {
 
   const closePosition = useCallback(async position => {
     const marketPrice = quotes[position.sym]?.price || position.avg;
+    const isShort = position.qty < 0;
     const response = await placeOrder({
       userid,
       symbol: position.sym,
       name: position.name || position.sym,
       exchange: position.exch || "",
       ordertype: "MARKET",
-      side: "SELL",
-      product: "CNC",
+      side: isShort ? "BUY" : "SELL",
+      product: position.product || (isShort ? "MIS" : "CNC"),
       validity: "DAY",
-      quantity: position.qty,
+      quantity: Math.abs(position.qty),
       price: marketPrice,
       marketPrice
     });
@@ -160,7 +161,7 @@ export function useTradingAccount(userid) {
       value,
       cost,
       pnl,
-      pnlPct: cost ? (pnl / cost) * 100 : 0,
+      pnlPct: cost ? (pnl / Math.abs(cost)) * 100 : 0,
       type: quote?.type || (position.sym.includes("/") ? "Crypto" : "Stocks")
     };
   }), [positions, quotes]);

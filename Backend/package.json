@@ -20,6 +20,7 @@
     "ioredis": "^5.11.1",
     "mongoos": "^0.0.1-security",
     "mongoose": "^9.6.3",
+    "node-cron": "^4.5.0",
     "nodemailer": "^9.0.3",
     "nodemon": "^3.1.14",
     "socket.io": "^4.8.3",
