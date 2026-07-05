@@ -2,37 +2,104 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux"
 import {Link} from "react-router-dom"
+import { useTheme } from "../context/ThemeContext";
+import ThemeToggle from "./ThemeToggle";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:2222";
 const socket = io(API_BASE);
 
 /* ═══════════════════════════════════════════════════════════════════
    TRADEX PRO v2.0 — Best-in-class Trading Terminal (LIVE DATA)
-   Features:
-   ✅ Angel One parity: watchlist, chart, indicators, drawing tools,
-      depth, option chain, positions, orders, alerts, news
-   ✅ New: Multi-layout charts, Market Scanner, Heatmap, AI Analysis,
-      Portfolio analytics, Advanced order types, Risk calculator,
-      Economic calendar, Screener, Dark/Light theme, Mini charts,
-      P&L chart, Trade journal, Smart alerts, Hotkeys
 ═══════════════════════════════════════════════════════════════════ */
+
+// ── THEME TOKENS ──────────────────────────────────────────────────
+const PALETTES = {
+  dark: {
+    page: "#0b0e1a",
+    headerBg: "#0d1020",
+    toolbarBg: "#0f1220",
+    leftBarBg: "#0d1020",
+    panelBg: "#131722",
+    panelBg2: "#0f1220",
+    dialogBg: "#141824",
+    dropdownBg: "#1a1e30",
+    indPanelBg: "#181c2e",
+    aiPanelBg: "#0a0e1e",
+    toastBg: "#1e2335",
+    canvasBg: "#0f1117",
+    canvasPanelBg: "#131722",
+    canvasSubBg: "#0e1117",
+    chipBg: "rgba(255,255,255,0.05)",
+    inputBg: "rgba(255,255,255,0.06)",
+    border: "rgba(255,255,255,0.06)",
+    borderStrong: "rgba(255,255,255,0.1)",
+    borderFaint: "rgba(255,255,255,0.03)",
+    hoverBg: "rgba(255,255,255,0.03)",
+    textPrimary: "#e2e8f0",
+    textHeading: "#f1f5f9",
+    textStrong: "#f8fafc",
+    textSecondary: "#94a3b8",
+    textMuted: "#6b7280",
+    textDim: "#374151",
+    textFaint: "#4b5563",
+    textGhost: "#2a3345",
+    gridLine: "rgba(255,255,255,0.04)",
+    crosshair: "rgba(255,255,255,0.18)",
+    crosshairLabelBg: "#1e2840",
+    ohlcHeaderBg: "rgba(11,14,26,0.95)",
+  },
+  light: {
+    page: "#eef1f7",
+    headerBg: "#ffffff",
+    toolbarBg: "#f7f9fc",
+    leftBarBg: "#ffffff",
+    panelBg: "#ffffff",
+    panelBg2: "#f7f9fc",
+    dialogBg: "#ffffff",
+    dropdownBg: "#ffffff",
+    indPanelBg: "#ffffff",
+    aiPanelBg: "#f7f9fc",
+    toastBg: "#ffffff",
+    canvasBg: "#f4f6fb",
+    canvasPanelBg: "#ffffff",
+    canvasSubBg: "#f7f9fc",
+    chipBg: "rgba(15,23,42,0.04)",
+    inputBg: "rgba(15,23,42,0.045)",
+    border: "rgba(15,23,42,0.09)",
+    borderStrong: "rgba(15,23,42,0.14)",
+    borderFaint: "rgba(15,23,42,0.05)",
+    hoverBg: "rgba(15,23,42,0.03)",
+    textPrimary: "#1e293b",
+    textHeading: "#0f172a",
+    textStrong: "#0f172a",
+    textSecondary: "#475569",
+    textMuted: "#64748b",
+    textDim: "#94a3b8",
+    textFaint: "#7c8aa0",
+    textGhost: "#b8c2d4",
+    gridLine: "rgba(15,23,42,0.06)",
+    crosshair: "rgba(15,23,42,0.25)",
+    crosshairLabelBg: "#e7ebf3",
+    ohlcHeaderBg: "rgba(255,255,255,0.95)",
+  },
+};
 
 // ── GLOBAL STYLES ────────────────────────────────────────────────
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Inter',sans-serif; background:#0b0e1a; color:#e2e8f0; overflow:hidden; }
+  body { font-family:'Inter',sans-serif; overflow:hidden; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-  ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.2); }
+  ::-webkit-scrollbar-thumb { background:rgba(128,128,128,0.25); border-radius:2px; }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(128,128,128,0.4); }
   input,textarea,button,select { font-family:'Inter',sans-serif; background:none; border:none; outline:none; cursor:pointer; color:inherit; }
   .mono { font-family:'JetBrains Mono',monospace; }
 
-  /* LEFT TOOLBAR BUTTONS - FIXED: much larger, visible */
+  /* LEFT TOOLBAR BUTTONS */
   .tool-btn {
     width:32px; height:32px; border-radius:6px; display:flex; align-items:center; justify-content:center;
-    color:#8899bb; border:1px solid transparent; transition:all 0.12s; font-size:13px; cursor:pointer;
+    color:var(--tx-text-muted); border:1px solid transparent; transition:all 0.12s; font-size:13px; cursor:pointer;
     background:transparent; flex-shrink:0;
   }
   .tool-btn:hover { background:rgba(99,130,255,0.15); color:#aec0ff; border-color:rgba(99,130,255,0.25); }
@@ -42,7 +109,7 @@ const STYLES = `
   .rp-tab {
     width:100%; min-height:56px; display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:4px; border-radius:0; transition:all 0.12s; border-left:3px solid transparent; padding:6px 2px; cursor:pointer;
-    color:#94a3b8;
+    color:var(--tx-text-secondary);
   }
   .rp-tab:hover { background:rgba(99,130,255,0.12); color:#c7d7f4; }
   .rp-tab-active { background:rgba(41,98,255,0.18); border-left-color:#2962ff; color:#7da8ff; }
@@ -59,39 +126,39 @@ const STYLES = `
 
   /* WATCHLIST */
   .sym-row { cursor:pointer; transition:all 0.1s; }
-  .sym-row:hover { background:rgba(255,255,255,0.03); }
+  .sym-row:hover { background:var(--tx-hover); }
   .sym-row-active { background:rgba(41,98,255,0.08) !important; border-left:2px solid #2962ff !important; }
 
   /* TABLE */
-  .t-head { padding:4px 8px; font-size:9px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid rgba(255,255,255,0.05); white-space:nowrap; }
-  .t-row:hover { background:rgba(255,255,255,0.025); }
-  .t-cell { padding:5px 8px; font-size:10.5px; color:#94a3b8; white-space:nowrap; }
+  .t-head { padding:4px 8px; font-size:9px; font-weight:700; color:var(--tx-text-dim); text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid var(--tx-border); white-space:nowrap; }
+  .t-row:hover { background:var(--tx-hover); }
+  .t-cell { padding:5px 8px; font-size:10.5px; color:var(--tx-text-secondary); white-space:nowrap; }
 
   /* INDICATORS */
-  .ind-chip { display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:5px; font-size:9.5px; font-weight:600; border:1px solid rgba(255,255,255,0.07); color:#6b7280; transition:all 0.1s; cursor:pointer; }
-  .ind-chip:hover { background:rgba(255,255,255,0.05); color:#94a3b8; }
+  .ind-chip { display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:5px; font-size:9.5px; font-weight:600; border:1px solid var(--tx-border); color:var(--tx-text-muted); transition:all 0.1s; cursor:pointer; }
+  .ind-chip:hover { background:var(--tx-hover); color:var(--tx-text-secondary); }
   .ind-on { background:rgba(41,98,255,0.12) !important; border-color:rgba(41,98,255,0.3) !important; color:#60a5fa !important; }
 
   /* TOGGLE */
   .toggle { width:28px; height:15px; border-radius:8px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; padding:1px; flex-shrink:0; }
   .toggle-on { background:#2962ff; }
-  .toggle-off { background:rgba(255,255,255,0.12); }
+  .toggle-off { background:var(--tx-border-strong); }
   .toggle-thumb { width:13px; height:13px; border-radius:50%; background:#fff; transition:transform 0.2s; }
 
   /* DEPTH ROW */
-  .depth-row { padding:4px 10px; border-bottom:1px solid rgba(255,255,255,0.025); overflow:hidden; min-height:26px; }
-  .depth-row:hover { background:rgba(255,255,255,0.02); }
+  .depth-row { padding:4px 10px; border-bottom:1px solid var(--tx-border-faint); overflow:hidden; min-height:26px; }
+  .depth-row:hover { background:var(--tx-hover); }
 
   /* SCANNER ROW */
-  .scan-row { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.03); cursor:pointer; transition:all 0.1s; }
+  .scan-row { padding:6px 10px; border-bottom:1px solid var(--tx-border-faint); cursor:pointer; transition:all 0.1s; }
   .scan-row:hover { background:rgba(41,98,255,0.06); }
 
   /* AI MESSAGES */
-  .ai-msg-bot { background:rgba(255,255,255,0.03); border-radius:10px; border-bottom-left-radius:2px; padding:10px 12px; border:1px solid rgba(255,255,255,0.06); }
+  .ai-msg-bot { background:var(--tx-chip); border-radius:10px; border-bottom-left-radius:2px; padding:10px 12px; border:1px solid var(--tx-border); }
   .ai-msg-user { background:rgba(41,98,255,0.12); border-radius:10px; border-bottom-right-radius:2px; padding:8px 12px; margin-left:20px; border:1px solid rgba(41,98,255,0.2); font-size:11.5px; color:#c7d7f4; text-align:right; }
 
   /* TOAST */
-  .toast { background:#1e2335; border-radius:8px; padding:10px 14px; font-size:11.5px; font-weight:600; display:flex; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); min-width:240px; max-width:340px; animation:slideIn 0.25s ease; }
+  .toast { background:var(--tx-toast-bg); border-radius:8px; padding:10px 14px; font-size:11.5px; font-weight:600; display:flex; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(0,0,0,0.3); border:1px solid var(--tx-border); min-width:240px; max-width:340px; animation:slideIn 0.25s ease; }
   @keyframes slideIn { from { transform:translateX(30px); opacity:0; } to { transform:translateX(0); opacity:1; } }
   @keyframes fadeUp { from { transform:translateY(8px); opacity:0; } to { transform:translateY(0); opacity:1; } }
   .fade-up { animation:fadeUp 0.2s ease; }
@@ -111,7 +178,7 @@ const STYLES = `
 
   /* HEATMAP cells */
   .hm-cell { border-radius:4px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:all 0.15s; padding:4px; overflow:hidden; }
-  .hm-cell:hover { filter:brightness(1.2); transform:scale(1.02); }
+  .hm-cell:hover { filter:brightness(1.08); transform:scale(1.02); }
 
   /* MINI SPARKLINE */
   .sparkline-canvas { display:block; }
@@ -120,17 +187,17 @@ const STYLES = `
   .portfolio-bar { border-radius:3px 3px 0 0; transition:height 0.3s ease; }
 
   /* HEADER NAV */
-  .nav-tab { padding:0 12px; height:100%; display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; color:#5a6a8a; border-bottom:2px solid transparent; transition:all 0.12s; cursor:pointer; white-space:nowrap; }
-  .nav-tab:hover { color:#8899cc; background:rgba(255,255,255,0.02); }
+  .nav-tab { padding:0 12px; height:100%; display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; color:var(--tx-text-faint); border-bottom:2px solid transparent; transition:all 0.12s; cursor:pointer; white-space:nowrap; }
+  .nav-tab:hover { color:var(--tx-text-secondary); background:var(--tx-hover); }
   .nav-tab-active { color:#7da8ff; border-bottom-color:#2962ff; }
 
   /* SCREENER */
-  .screen-chip { padding:3px 10px; border-radius:20px; font-size:10px; font-weight:600; border:1px solid rgba(255,255,255,0.08); color:#6b7280; cursor:pointer; transition:all 0.12s; }
+  .screen-chip { padding:3px 10px; border-radius:20px; font-size:10px; font-weight:600; border:1px solid var(--tx-border); color:var(--tx-text-muted); cursor:pointer; transition:all 0.12s; }
   .screen-chip:hover { border-color:rgba(41,98,255,0.3); color:#60a5fa; }
   .screen-chip-on { background:rgba(41,98,255,0.14); border-color:rgba(41,98,255,0.35); color:#60a5fa; }
 
   /* RISK CALC */
-  .rc-input { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 10px; font-size:11.5px; color:#e2e8f0; width:100%; font-family:'JetBrains Mono',monospace; }
+  .rc-input { background:var(--tx-input-bg); border:1px solid var(--tx-border-strong); border-radius:6px; padding:6px 10px; font-size:11.5px; color:var(--tx-text-primary); width:100%; font-family:'JetBrains Mono',monospace; }
   .rc-input:focus { border-color:rgba(41,98,255,0.4); background:rgba(41,98,255,0.04); }
 
   /* GLOW effects */
@@ -157,12 +224,8 @@ function generateCandles(base, n = 500, volatility = 0.015) {
 
 const SYMBOLS = [
   { sym: "AAPL", exch: "NASDAQ", name: "Apple Inc", base: 185, color: "#c084fc", volatility: 0.012, sector: "Tech" },
-
-
   { sym: "BTC/USD", exch: "CRYPTO", name: "Bitcoin", base: 65000, color: "#f59e0b", volatility: 0.020, sector: "Crypto" },
-
   { sym: "XAU/USD", exch: "COMMOD", name: "Gold Spot", base: 2350, color: "#eab308", volatility: 0.010, sector: "Commodity" },
-
   { sym: "EUR/USD", exch: "FOREX", name: "Euro / Dollar", base: 1.08, color: "#3b82f6", volatility: 0.004, sector: "Forex" },
 ];
 
@@ -313,25 +376,27 @@ const clamp = (v, mn, mx) => Math.min(Math.max(v, mn), mx);
 
 // ── MARKDOWN ──────────────────────────────────────────────────────
 function Markdown({ text }) {
+  const { theme } = useTheme();
+  const pal = PALETTES[theme];
   if (!text) return null;
   return (
-    <div style={{ fontSize: 11.5, lineHeight: 1.75, color: "#cbd5e1" }}>
+    <div style={{ fontSize: 11.5, lineHeight: 1.75, color: pal.textSecondary }}>
       {text.split("\n").map((line, i) => {
-        if (line.startsWith("### ")) return <div key={i} style={{ fontWeight: 700, color: "#f1f5f9", fontSize: 12, marginTop: 8, marginBottom: 2 }}>{line.slice(4)}</div>;
-        if (line.startsWith("## ")) return <div key={i} style={{ fontWeight: 800, color: "#f8fafc", fontSize: 13, marginTop: 10, marginBottom: 3, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 4 }}>{line.slice(3)}</div>;
-        if (line.startsWith("# ")) return <div key={i} style={{ fontWeight: 900, color: "#fff", fontSize: 14, marginTop: 12, marginBottom: 4 }}>{line.slice(2)}</div>;
-        if (line === "---") return <hr key={i} style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.08)", margin: "8px 0" }} />;
+        if (line.startsWith("### ")) return <div key={i} style={{ fontWeight: 700, color: pal.textHeading, fontSize: 12, marginTop: 8, marginBottom: 2 }}>{line.slice(4)}</div>;
+        if (line.startsWith("## ")) return <div key={i} style={{ fontWeight: 800, color: pal.textStrong, fontSize: 13, marginTop: 10, marginBottom: 3, borderBottom: `1px solid ${pal.border}`, paddingBottom: 4 }}>{line.slice(3)}</div>;
+        if (line.startsWith("# ")) return <div key={i} style={{ fontWeight: 900, color: pal.textStrong, fontSize: 14, marginTop: 12, marginBottom: 4 }}>{line.slice(2)}</div>;
+        if (line === "---") return <hr key={i} style={{ border: "none", borderTop: `1px solid ${pal.border}`, margin: "8px 0" }} />;
         if (line === "") return <div key={i} style={{ height: 5 }} />;
         const parts = line.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
         const isBullet = line.startsWith("• ") || line.startsWith("- ") || line.startsWith("* ");
         const content = <span>{parts.map((p, j) => {
-          if (p.startsWith("**") && p.endsWith("**")) return <strong key={j} style={{ color: "#e2e8f0", fontWeight: 700 }}>{p.slice(2, -2)}</strong>;
-          if (p.startsWith("`") && p.endsWith("`")) return <code key={j} style={{ fontFamily: "'JetBrains Mono',monospace", background: "rgba(255,255,255,0.08)", padding: "1px 5px", borderRadius: 3, fontSize: 10 }}>{p.slice(1, -1)}</code>;
-          if (p.startsWith("*") && p.endsWith("*")) return <em key={j} style={{ color: "#94a3b8" }}>{p.slice(1, -1)}</em>;
+          if (p.startsWith("**") && p.endsWith("**")) return <strong key={j} style={{ color: pal.textPrimary, fontWeight: 700 }}>{p.slice(2, -2)}</strong>;
+          if (p.startsWith("`") && p.endsWith("`")) return <code key={j} style={{ fontFamily: "'JetBrains Mono',monospace", background: pal.chipBg, padding: "1px 5px", borderRadius: 3, fontSize: 10 }}>{p.slice(1, -1)}</code>;
+          if (p.startsWith("*") && p.endsWith("*")) return <em key={j} style={{ color: pal.textSecondary }}>{p.slice(1, -1)}</em>;
           return <span key={j}>{p}</span>;
         })}</span>;
-        if (isBullet) return <div key={i} style={{ paddingLeft: 14, position: "relative", color: "#94a3b8", marginBottom: 3 }}><span style={{ position: "absolute", left: 2, color: "#60a5fa" }}>›</span>{content}</div>;
-        return <div key={i} style={{ color: "#94a3b8", marginBottom: 2 }}>{content}</div>;
+        if (isBullet) return <div key={i} style={{ paddingLeft: 14, position: "relative", color: pal.textSecondary, marginBottom: 3 }}><span style={{ position: "absolute", left: 2, color: "#60a5fa" }}>›</span>{content}</div>;
+        return <div key={i} style={{ color: pal.textSecondary, marginBottom: 2 }}>{content}</div>;
       })}
     </div>
   );
@@ -339,19 +404,23 @@ function Markdown({ text }) {
 
 // ── TOAST ─────────────────────────────────────────────────────────
 function Toast({ message, type, onDone }) {
+  const { theme } = useTheme();
+  const pal = PALETTES[theme];
   useEffect(() => { const t = setTimeout(onDone, 3500); return () => clearTimeout(t); }, []);
   const colors = { success: "#089981", error: "#f23645", warning: "#f59e0b", info: "#3b82f6" };
   const icons = { success: "✓", error: "✕", warning: "⚠", info: "ℹ" };
   return (
     <div className="toast" style={{ borderLeft: `3px solid ${colors[type] || colors.info}` }}>
       <span style={{ color: colors[type] || colors.info, fontSize: 14, fontWeight: 700 }}>{icons[type] || icons.info}</span>
-      <span style={{ color: "#e2e8f0" }}>{message}</span>
+      <span style={{ color: pal.textPrimary }}>{message}</span>
     </div>
   );
 }
 
 // ── ORDER DIALOG ──────────────────────────────────────────────────
 function OrderDialog({ sym, name, exch, price, side, product: initialProduct, qty: initialQty, onClose, onConfirm }) {
+  const { theme } = useTheme();
+  const pal = PALETTES[theme];
   const [qty, setQty] = useState(initialQty ? String(initialQty) : "1");
   const [orderType, setOrderType] = useState("MARKET");
   const [limitPrice, setLimitPrice] = useState(fmt(price));
@@ -394,46 +463,46 @@ function OrderDialog({ sym, name, exch, price, side, product: initialProduct, qt
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.75)" }}>
-      <div style={{ width: 380, background: "#141824", border: `1px solid ${side === "BUY" ? "rgba(8,153,129,0.4)" : "rgba(242,54,69,0.4)"}`, borderRadius: 14, overflow: "hidden", boxShadow: `0 24px 64px rgba(0,0,0,0.7)` }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,14,26,0.6)" }}>
+      <div style={{ width: 380, background: pal.dialogBg, border: `1px solid ${side === "BUY" ? "rgba(8,153,129,0.4)" : "rgba(242,54,69,0.4)"}`, borderRadius: 14, overflow: "hidden", boxShadow: `0 24px 64px rgba(0,0,0,0.35)` }}>
         <div style={{ padding: "14px 18px", background: side === "BUY" ? "rgba(8,153,129,0.1)" : "rgba(242,54,69,0.1)", borderBottom: `1px solid ${side === "BUY" ? "rgba(8,153,129,0.2)" : "rgba(242,54,69,0.2)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 15, color: side === "BUY" ? "#089981" : "#f23645" }}>{side} {sym}</div>
-            <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>LTP: ₹{fmt(price)} · {new Date().toLocaleTimeString()}</div>
+            <div style={{ fontSize: 10, color: pal.textMuted, marginTop: 2 }}>LTP: ₹{fmt(price)} · {new Date().toLocaleTimeString()}</div>
           </div>
-          <button onClick={onClose} style={{ color: "#6b7280", fontSize: 20, cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} style={{ color: pal.textMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
         </div>
         <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 13 }}>
           <div style={{ display: "flex", gap: 6 }}>
             {["MIS", "CNC"].map(p => (
-              <button key={p} onClick={() => setProduct(p)} style={{ flex: 1, padding: "5px 0", borderRadius: 5, fontSize: 10.5, fontWeight: 700, border: `1px solid ${product === p ? "rgba(41,98,255,0.5)" : "rgba(255,255,255,0.07)"}`, background: product === p ? "rgba(41,98,255,0.12)" : "transparent", color: product === p ? "#7da8ff" : "#6b7280" }}>{p}</button>
+              <button key={p} onClick={() => setProduct(p)} style={{ flex: 1, padding: "5px 0", borderRadius: 5, fontSize: 10.5, fontWeight: 700, border: `1px solid ${product === p ? "rgba(41,98,255,0.5)" : pal.border}`, background: product === p ? "rgba(41,98,255,0.12)" : "transparent", color: product === p ? "#7da8ff" : pal.textMuted }}>{p}</button>
             ))}
           </div>
-          <div style={{ fontSize: 9, color: "#4b5563", marginTop: -6 }}>
+          <div style={{ fontSize: 9, color: pal.textFaint, marginTop: -6 }}>
             {product === "MIS" ? "Intraday · 5x margin · auto square-off at close · shorting allowed" : "Delivery · full value · no leverage · must hold to sell"}
           </div>
           <div style={{ display: "flex", gap: 4 }}>
             {["MARKET", "LIMIT", "SL", "SL-M"].map(t => (
-              <button key={t} onClick={() => setOrderType(t)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: 10, fontWeight: 700, border: `1px solid ${orderType === t ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.06)"}`, background: orderType === t ? "rgba(255,255,255,0.1)" : "transparent", color: orderType === t ? "#f1f5f9" : "#6b7280" }}>{t}</button>
+              <button key={t} onClick={() => setOrderType(t)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: 10, fontWeight: 700, border: `1px solid ${orderType === t ? pal.borderStrong : pal.border}`, background: orderType === t ? pal.chipBg : "transparent", color: orderType === t ? pal.textHeading : pal.textMuted }}>{t}</button>
             ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>Quantity</div>
+              <div style={{ fontSize: 10, color: pal.textMuted, marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>Quantity</div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <button onClick={() => setQty(v => String(Math.max(1, Number(v) - 1)))} style={{ width: 22, height: 28, borderRadius: 3, background: "rgba(255,255,255,0.06)", color: "#94a3b8", fontSize: 16 }}>−</button>
-                <input value={qty} onChange={e => setQty(e.target.value)} type="number" min="1" style={{ flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, padding: "4px 6px", fontSize: 12, color: "#f1f5f9", textAlign: "center", fontFamily: "'JetBrains Mono',monospace" }} />
-                <button onClick={() => setQty(v => String(Number(v) + 1))} style={{ width: 22, height: 28, borderRadius: 3, background: "rgba(255,255,255,0.06)", color: "#94a3b8", fontSize: 16 }}>+</button>
+                <button onClick={() => setQty(v => String(Math.max(1, Number(v) - 1)))} style={{ width: 22, height: 28, borderRadius: 3, background: pal.chipBg, color: pal.textSecondary, fontSize: 16 }}>−</button>
+                <input value={qty} onChange={e => setQty(e.target.value)} type="number" min="1" style={{ flex: 1, background: pal.inputBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 4, padding: "4px 6px", fontSize: 12, color: pal.textHeading, textAlign: "center", fontFamily: "'JetBrains Mono',monospace" }} />
+                <button onClick={() => setQty(v => String(Number(v) + 1))} style={{ width: 22, height: 28, borderRadius: 3, background: pal.chipBg, color: pal.textSecondary, fontSize: 16 }}>+</button>
               </div>
             </div>
             {orderType !== "MARKET" && <div>
-              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>Limit Price</div>
-              <input value={limitPrice} onChange={e => setLimitPrice(e.target.value)} type="number" style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, padding: "5px 8px", fontSize: 12, color: "#f1f5f9", fontFamily: "'JetBrains Mono',monospace" }} />
+              <div style={{ fontSize: 10, color: pal.textMuted, marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>Limit Price</div>
+              <input value={limitPrice} onChange={e => setLimitPrice(e.target.value)} type="number" style={{ width: "100%", background: pal.inputBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 4, padding: "5px 8px", fontSize: 12, color: pal.textHeading, fontFamily: "'JetBrains Mono',monospace" }} />
             </div>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div className={`toggle ${useSlTarget ? "toggle-on" : "toggle-off"}`} onClick={() => setUseSlTarget(v => !v)}><div className="toggle-thumb" style={{ transform: useSlTarget ? "translateX(13px)" : "translateX(0)" }} /></div>
-            <span style={{ fontSize: 10.5, color: "#6b7280", fontWeight: 600 }}>SL & Target</span>
+            <span style={{ fontSize: 10.5, color: pal.textMuted, fontWeight: 600 }}>SL & Target</span>
             {useSlTarget && rr > 0 && <span style={{ fontSize: 9.5, color: rr >= 2 ? "#089981" : "#f59e0b", fontWeight: 700, marginLeft: "auto" }}>R:R = 1:{rr.toFixed(1)}</span>}
           </div>
           {useSlTarget && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -446,9 +515,9 @@ function OrderDialog({ sym, name, exch, price, side, product: initialProduct, qt
               <input value={target} onChange={e => setTarget(e.target.value)} type="number" style={{ width: "100%", background: "rgba(8,153,129,0.05)", border: "1px solid rgba(8,153,129,0.2)", borderRadius: 4, padding: "5px 8px", fontSize: 12, color: "#10b981", fontFamily: "'JetBrains Mono',monospace" }} />
             </div>
           </div>}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 6 }}>
-            <span style={{ fontSize: 10, color: "#6b7280" }}>{product === "MIS" ? "Est. Margin (5x)" : "Est. Value"}</span>
-            <span className="mono" style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 12 }}>₹{(product === "MIS" ? val / 5 : val).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: pal.chipBg, borderRadius: 6 }}>
+            <span style={{ fontSize: 10, color: pal.textMuted }}>{product === "MIS" ? "Est. Margin (5x)" : "Est. Value"}</span>
+            <span className="mono" style={{ fontWeight: 700, color: pal.textPrimary, fontSize: 12 }}>₹{(product === "MIS" ? val / 5 : val).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
           </div>
           {submitError && <div style={{ fontSize: 10.5, color: "#f87171", padding: "7px 9px", borderRadius: 5, background: "rgba(242,54,69,0.08)", border: "1px solid rgba(242,54,69,0.18)" }}>{submitError}</div>}
           <div style={{ display: "flex", gap: 8 }}>
@@ -465,44 +534,46 @@ function OrderDialog({ sym, name, exch, price, side, product: initialProduct, qt
 
 // ── ALERT DIALOG ──────────────────────────────────────────────────
 function AlertDialog({ sym, price, onClose, onSet }) {
+  const { theme } = useTheme();
+  const pal = PALETTES[theme];
   const [ap, setAp] = useState(fmt(price));
   const [cond, setCond] = useState("PRICE_ABOVE");
   const [note, setNote] = useState("");
   const [alertType, setAlertType] = useState("ONCE");
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.75)" }}>
-      <div style={{ width: 320, background: "#141824", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, overflow: "hidden", boxShadow: "0 20px 56px rgba(0,0,0,0.65)" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,14,26,0.6)" }}>
+      <div style={{ width: 320, background: pal.dialogBg, border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, overflow: "hidden", boxShadow: "0 20px 56px rgba(0,0,0,0.3)" }}>
         <div style={{ padding: "14px 16px", background: "rgba(245,158,11,0.08)", borderBottom: "1px solid rgba(245,158,11,0.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontWeight: 800, fontSize: 13, color: "#f59e0b" }}>⊕ Set Alert · {sym}</div>
-          <button onClick={onClose} style={{ color: "#6b7280", fontSize: 18 }}>✕</button>
+          <button onClick={onClose} style={{ color: pal.textMuted, fontSize: 18 }}>✕</button>
         </div>
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600 }}>Condition</div>
+            <div style={{ fontSize: 10, color: pal.textMuted, marginBottom: 4, fontWeight: 600 }}>Condition</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
               {[["PRICE_ABOVE", "Price Above"], ["PRICE_BELOW", "Price Below"], ["PCT_CHANGE", "% Change"], ["VOLUME_SURGE", "Vol Surge"]].map(([v, l]) => (
-                <button key={v} onClick={() => setCond(v)} style={{ padding: "5px 0", borderRadius: 4, fontSize: 10, fontWeight: 600, border: `1px solid ${cond === v ? "rgba(245,158,11,0.4)" : "rgba(255,255,255,0.07)"}`, background: cond === v ? "rgba(245,158,11,0.1)" : "transparent", color: cond === v ? "#f59e0b" : "#6b7280" }}>{l}</button>
+                <button key={v} onClick={() => setCond(v)} style={{ padding: "5px 0", borderRadius: 4, fontSize: 10, fontWeight: 600, border: `1px solid ${cond === v ? "rgba(245,158,11,0.4)" : pal.border}`, background: cond === v ? "rgba(245,158,11,0.1)" : "transparent", color: cond === v ? "#f59e0b" : pal.textMuted }}>{l}</button>
               ))}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600 }}>Alert Price</div>
+            <div style={{ fontSize: 10, color: pal.textMuted, marginBottom: 4, fontWeight: 600 }}>Alert Price</div>
             <input value={ap} onChange={e => setAp(e.target.value)} type="number" className="rc-input" />
           </div>
           <div>
-            <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600 }}>Alert Type</div>
+            <div style={{ fontSize: 10, color: pal.textMuted, marginBottom: 4, fontWeight: 600 }}>Alert Type</div>
             <div style={{ display: "flex", gap: 4 }}>
               {["ONCE", "EVERY", "CLOSING"].map(t => (
-                <button key={t} onClick={() => setAlertType(t)} style={{ flex: 1, padding: "4px 0", borderRadius: 4, fontSize: 9.5, fontWeight: 600, border: `1px solid ${alertType === t ? "rgba(41,98,255,0.4)" : "rgba(255,255,255,0.07)"}`, background: alertType === t ? "rgba(41,98,255,0.1)" : "transparent", color: alertType === t ? "#7da8ff" : "#6b7280" }}>{t}</button>
+                <button key={t} onClick={() => setAlertType(t)} style={{ flex: 1, padding: "4px 0", borderRadius: 4, fontSize: 9.5, fontWeight: 600, border: `1px solid ${alertType === t ? "rgba(41,98,255,0.4)" : pal.border}`, background: alertType === t ? "rgba(41,98,255,0.1)" : "transparent", color: alertType === t ? "#7da8ff" : pal.textMuted }}>{t}</button>
               ))}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600 }}>Note (optional)</div>
-            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note..." className="rc-input" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 10px", fontSize: 11, color: "#e2e8f0", width: "100%" }} />
+            <div style={{ fontSize: 10, color: pal.textMuted, marginBottom: 4, fontWeight: 600 }}>Note (optional)</div>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note..." className="rc-input" style={{ background: pal.inputBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 6, padding: "6px 10px", fontSize: 11, color: pal.textPrimary, width: "100%" }} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={onClose} style={{ flex: 1, padding: "7px 0", borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280", fontSize: 11 }}>Cancel</button>
+            <button onClick={onClose} style={{ flex: 1, padding: "7px 0", borderRadius: 5, border: `1px solid ${pal.border}`, color: pal.textMuted, fontSize: 11 }}>Cancel</button>
             <button onClick={() => { onSet({ sym, price: Number(ap), condition: cond, alertType, note }); onClose(); }} style={{ flex: 2, padding: "7px 0", borderRadius: 5, background: "rgba(245,158,11,0.18)", border: "1px solid rgba(245,158,11,0.35)", color: "#f59e0b", fontWeight: 700, fontSize: 11 }}>Set Alert</button>
           </div>
         </div>
@@ -513,6 +584,8 @@ function AlertDialog({ sym, price, onClose, onSet }) {
 
 // ── RISK CALCULATOR ───────────────────────────────────────────────
 function RiskCalc({ price, onClose }) {
+  const { theme } = useTheme();
+  const pal = PALETTES[theme];
   const [capital, setCapital] = useState("100000");
   const [risk, setRisk] = useState("1");
   const [entry, setEntry] = useState(fmt(price));
@@ -527,32 +600,32 @@ function RiskCalc({ price, onClose }) {
   const potProfit = qty * tgtDiff;
   const maxLoss = qty * slDiff;
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.75)" }}>
-      <div style={{ width: 360, background: "#141824", border: "1px solid rgba(99,130,255,0.3)", borderRadius: 14, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,14,26,0.6)" }}>
+      <div style={{ width: 360, background: pal.dialogBg, border: "1px solid rgba(99,130,255,0.3)", borderRadius: 14, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
         <div style={{ padding: "14px 16px", background: "rgba(99,130,255,0.08)", borderBottom: "1px solid rgba(99,130,255,0.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontWeight: 800, fontSize: 13, color: "#7da8ff" }}>⚖ Risk Calculator</div>
-          <button onClick={onClose} style={{ color: "#6b7280", fontSize: 18 }}>✕</button>
+          <button onClick={onClose} style={{ color: pal.textMuted, fontSize: 18 }}>✕</button>
         </div>
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[["Capital (₹)", capital, setCapital], ["Risk %", risk, setRisk], ["Entry", entry, setEntry], ["Stop Loss", sl, setSl], ["Target", target, setTarget]].map(([l, v, s]) => (
               <div key={l}>
-                <div style={{ fontSize: 9.5, color: "#6b7280", marginBottom: 3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{l}</div>
+                <div style={{ fontSize: 9.5, color: pal.textMuted, marginBottom: 3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{l}</div>
                 <input value={v} onChange={e => s(e.target.value)} type="number" className="rc-input" />
               </div>
             ))}
           </div>
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {[["Position Size", qty + " shares", "#60a5fa"], ["Investment", `₹${invest.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`, "#94a3b8"], ["Risk:Reward", `1 : ${rr.toFixed(2)}`, rr >= 2 ? "#089981" : rr >= 1.5 ? "#f59e0b" : "#f23645"], ["Max Loss", `₹${maxLoss.toFixed(0)}`, "#f23645"], ["Pot. Profit", `₹${potProfit.toFixed(0)}`, "#089981"], ["Risk Amt", `₹${riskAmt.toFixed(0)}`, "#f59e0b"]].map(([l, v, c]) => (
+          <div style={{ background: pal.chipBg, border: `1px solid ${pal.border}`, borderRadius: 8, padding: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {[["Position Size", qty + " shares", "#60a5fa"], ["Investment", `₹${invest.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`, pal.textSecondary], ["Risk:Reward", `1 : ${rr.toFixed(2)}`, rr >= 2 ? "#089981" : rr >= 1.5 ? "#f59e0b" : "#f23645"], ["Max Loss", `₹${maxLoss.toFixed(0)}`, "#f23645"], ["Pot. Profit", `₹${potProfit.toFixed(0)}`, "#089981"], ["Risk Amt", `₹${riskAmt.toFixed(0)}`, "#f59e0b"]].map(([l, v, c]) => (
               <div key={l}>
-                <div style={{ fontSize: 9, color: "#4b5563", marginBottom: 2, textTransform: "uppercase", fontWeight: 600 }}>{l}</div>
+                <div style={{ fontSize: 9, color: pal.textFaint, marginBottom: 2, textTransform: "uppercase", fontWeight: 600 }}>{l}</div>
                 <div className="mono" style={{ fontSize: 13, fontWeight: 700, color: c }}>{v}</div>
               </div>
             ))}
           </div>
           {rr >= 2 && <div style={{ textAlign: "center", fontSize: 10, color: "#089981", fontWeight: 600 }}>✓ Good Risk:Reward Ratio</div>}
           {rr < 1 && rr > 0 && <div style={{ textAlign: "center", fontSize: 10, color: "#f23645", fontWeight: 600 }}>⚠ Poor Risk:Reward — consider adjusting</div>}
-          <button onClick={onClose} style={{ padding: "8px 0", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", fontSize: 11 }}>Close</button>
+          <button onClick={onClose} style={{ padding: "8px 0", borderRadius: 6, border: `1px solid ${pal.borderStrong}`, color: pal.textSecondary, fontSize: 11 }}>Close</button>
         </div>
       </div>
     </div>
@@ -585,6 +658,9 @@ function Sparkline({ data, color, width = 60, height = 20 }) {
 
 // ── MAIN TERMINAL ─────────────────────────────────────────────────
 export default function TradingTerminal() {
+  const { theme, toggleTheme } = useTheme();
+  const pal = PALETTES[theme];
+
   // Candle store
   const [candleStore, setCandleStore] = useState(() => {
     const s = {};
@@ -594,9 +670,7 @@ export default function TradingTerminal() {
 
   const selector = useSelector(state => state?.auth?.user)
   const userId = selector?._id;
-  // console.log(selector)
   const [accountBalance, setAccountBalance] = useState(selector?.virtualBalance ?? 0);
-  // console.log(selector)
 
   // State
   const [activeSym, setActiveSym] = useState(SYMBOLS[0]);
@@ -951,12 +1025,12 @@ export default function TradingTerminal() {
     const fromY = y => minP + (1 - (y - PT) / (MAIN_H - PT - 2)) * pRng;
 
     // BG
-    ctx.fillStyle = "#0f1117"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#131722"; ctx.fillRect(0, 0, W, MAIN_H + VOL_H);
+    ctx.fillStyle = pal.canvasBg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = pal.canvasPanelBg; ctx.fillRect(0, 0, W, MAIN_H + VOL_H);
 
     // GRID
     if (grid) {
-      ctx.strokeStyle = "rgba(255,255,255,0.04)"; ctx.lineWidth = 1;
+      ctx.strokeStyle = pal.gridLine; ctx.lineWidth = 1;
       const rows = 8;
       for (let r = 0; r <= rows; r++) { const y = PT + (r / rows) * (MAIN_H - PT - 2); ctx.beginPath(); ctx.moveTo(LP, y); ctx.lineTo(W - RP, y); ctx.stroke(); }
       const cols = Math.min(8, vis.length);
@@ -964,7 +1038,7 @@ export default function TradingTerminal() {
     }
 
     // PRICE LABELS
-    ctx.fillStyle = "#374151"; ctx.font = "9px 'JetBrains Mono',monospace"; ctx.textAlign = "right";
+    ctx.fillStyle = pal.textDim; ctx.font = "9px 'JetBrains Mono',monospace"; ctx.textAlign = "right";
     for (let r = 0; r <= 6; r++) {
       const p = minP + (r / 6) * pRng;
       const y = toY(p);
@@ -972,7 +1046,7 @@ export default function TradingTerminal() {
     }
 
     // TIME LABELS
-    ctx.textAlign = "center"; ctx.fillStyle = "#374151"; ctx.font = "8px 'JetBrains Mono',monospace";
+    ctx.textAlign = "center"; ctx.fillStyle = pal.textDim; ctx.font = "8px 'JetBrains Mono',monospace";
     const labelStep = Math.max(1, Math.round(vis.length / 8));
     vis.forEach((c, i) => {
       if (i % labelStep === 0) {
@@ -1086,7 +1160,7 @@ export default function TradingTerminal() {
         ctx.fillStyle = c.close >= c.open ? "rgba(8,153,129,0.4)" : "rgba(242,54,69,0.4)";
         ctx.fillRect(x + (cW - bW) / 2, VY + VOL_H - vh, bW, vh);
       });
-      ctx.fillStyle = "#374151"; ctx.font = "bold 8px 'JetBrains Mono',monospace"; ctx.textAlign = "left";
+      ctx.fillStyle = pal.textDim; ctx.font = "bold 8px 'JetBrains Mono',monospace"; ctx.textAlign = "left";
       ctx.fillText("VOL", LP + 4, VY + 10);
     }
 
@@ -1095,10 +1169,10 @@ export default function TradingTerminal() {
 
     const drawSubPanel = (label, color, vals, levels = [], unit = "") => {
       const ST = subY; const endY = subY + SUB_H;
-      ctx.fillStyle = "#0e1117"; ctx.fillRect(0, ST, W, SUB_H);
-      ctx.strokeStyle = "rgba(255,255,255,0.06)"; ctx.lineWidth = 1;
+      ctx.fillStyle = pal.canvasSubBg; ctx.fillRect(0, ST, W, SUB_H);
+      ctx.strokeStyle = pal.border; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(0, ST); ctx.lineTo(W, ST); ctx.stroke();
-      ctx.fillStyle = "#374151"; ctx.font = "bold 8px 'JetBrains Mono',monospace"; ctx.textAlign = "left";
+      ctx.fillStyle = pal.textDim; ctx.font = "bold 8px 'JetBrains Mono',monospace"; ctx.textAlign = "left";
       ctx.fillText(label, LP + 4, ST + 11);
       const nonNull = vals.filter(v => v != null);
       if (!nonNull.length) { subY = endY; return; }
@@ -1122,17 +1196,17 @@ export default function TradingTerminal() {
       subY = endY;
     };
 
-    if (HAS_RSI) { const rsi = computeRSI(vis); drawSubPanel("RSI(14)", "#ec4899", rsi, [{ v: 70, col: "rgba(242,54,69,0.35)" }, { v: 50, col: "rgba(255,255,255,0.08)" }, { v: 30, col: "rgba(8,153,129,0.35)" }]); }
+    if (HAS_RSI) { const rsi = computeRSI(vis); drawSubPanel("RSI(14)", "#ec4899", rsi, [{ v: 70, col: "rgba(242,54,69,0.35)" }, { v: 50, col: pal.border }, { v: 30, col: "rgba(8,153,129,0.35)" }]); }
     if (HAS_MACD) {
       const emaFn = (d, p) => { const k = 2 / (p + 1); let e = d[0]; return d.map(v => { e = v * k + e * (1 - k); return e; }); };
       const cl = vis.map(c => c.close); const e12 = emaFn(cl, 12), e26 = emaFn(cl, 26);
       const macdL = e12.map((v, i) => v - e26[i]); const sig = emaFn(macdL, 9);
       const ST = subY; const endY = subY + SUB_H;
-      ctx.fillStyle = "#0e1117"; ctx.fillRect(0, ST, W, SUB_H);
-      ctx.strokeStyle = "rgba(255,255,255,0.06)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, ST); ctx.lineTo(W, ST); ctx.stroke();
-      ctx.fillStyle = "#374151"; ctx.font = "bold 8px 'JetBrains Mono',monospace"; ctx.textAlign = "left"; ctx.fillText("MACD(12,26,9)", LP + 4, ST + 11);
+      ctx.fillStyle = pal.canvasSubBg; ctx.fillRect(0, ST, W, SUB_H);
+      ctx.strokeStyle = pal.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, ST); ctx.lineTo(W, ST); ctx.stroke();
+      ctx.fillStyle = pal.textDim; ctx.font = "bold 8px 'JetBrains Mono',monospace"; ctx.textAlign = "left"; ctx.fillText("MACD(12,26,9)", LP + 4, ST + 11);
       const hist = macdL.map((v, i) => v - sig[i]); const maxH = Math.max(...hist.map(Math.abs)) || 1; const mid2 = ST + SUB_H / 2;
-      ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.beginPath(); ctx.moveTo(LP, mid2); ctx.lineTo(W - RP, mid2); ctx.stroke();
+      ctx.strokeStyle = pal.gridLine; ctx.beginPath(); ctx.moveTo(LP, mid2); ctx.lineTo(W - RP, mid2); ctx.stroke();
       hist.forEach((h, i) => { const x = LP + i * cW, bh = Math.abs(h / maxH) * (SUB_H / 2 - 14); ctx.fillStyle = h >= 0 ? "rgba(8,153,129,0.7)" : "rgba(242,54,69,0.7)"; ctx.fillRect(x + cW * 0.15, h >= 0 ? mid2 - bh : mid2, cW * 0.7, bh); });
       const mn2 = Math.min(...macdL), mx2 = Math.max(...macdL), rng2 = mx2 - mn2 || 1; const sTY2 = v => ST + 14 + (1 - (v - mn2) / rng2) * (SUB_H - 22);
       ctx.strokeStyle = "#06b6d4"; ctx.lineWidth = 1.2; ctx.beginPath(); macdL.forEach((v, i) => { const x = LP + (i + 0.5) * cW, y = sTY2(v); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.stroke();
@@ -1151,7 +1225,7 @@ export default function TradingTerminal() {
       drawSubPanel("ATR(14)", "#84cc16", atrSm);
     }
     if (HAS_OBV) { let obv = 0; const obvV = vis.map((c, i) => { obv += i === 0 ? c.volume : (c.close >= vis[i - 1].close ? c.volume : -c.volume); return obv; }); drawSubPanel("OBV", "#a78bfa", obvV); }
-    if (HAS_CCI) { const per = 20; const cciV = vis.map((_, i) => { if (i < per - 1) return null; const sl = vis.slice(i - per + 1, i + 1); const tp = sl.map(c => (c.high + c.low + c.close) / 3); const mn = tp.reduce((a, b) => a + b, 0) / per; const md = tp.reduce((a, b) => a + Math.abs(b - mn), 0) / per; return md === 0 ? 0 : (tp[tp.length - 1] - mn) / (0.015 * md); }); drawSubPanel("CCI(20)", "#34d399", cciV, [{ v: 100, col: "rgba(242,54,69,0.3)" }, { v: 0, col: "rgba(255,255,255,0.08)" }, { v: -100, col: "rgba(8,153,129,0.3)" }]); }
+    if (HAS_CCI) { const per = 20; const cciV = vis.map((_, i) => { if (i < per - 1) return null; const sl = vis.slice(i - per + 1, i + 1); const tp = sl.map(c => (c.high + c.low + c.close) / 3); const mn = tp.reduce((a, b) => a + b, 0) / per; const md = tp.reduce((a, b) => a + Math.abs(b - mn), 0) / per; return md === 0 ? 0 : (tp[tp.length - 1] - mn) / (0.015 * md); }); drawSubPanel("CCI(20)", "#34d399", cciV, [{ v: 100, col: "rgba(242,54,69,0.3)" }, { v: 0, col: pal.border }, { v: -100, col: "rgba(8,153,129,0.3)" }]); }
     if (HAS_ADX) {
       const per = 14; const adxV = vis.map((_, i) => { if (i < per) return null; let pdm = 0, ndm = 0, tr = 0; for (let j = i - per + 1; j <= i; j++) { const h = vis[j].high - vis[j - 1 || 0].high, l = vis[j - 1 || 0].low - vis[j].low; pdm += Math.max(h, 0); ndm += Math.max(l, 0); tr += Math.max(vis[j].high - vis[j].low, Math.abs(vis[j].high - (vis[j - 1 || 0].close || 0)), Math.abs(vis[j].low - (vis[j - 1 || 0].close || 0))); } const di = tr ? 100 * Math.abs(pdm - ndm) / tr : 0; return di; });
       drawSubPanel("ADX(14)", "#fbbf24", adxV, [{ v: 25, col: "rgba(251,191,36,0.3)" }]);
@@ -1187,15 +1261,15 @@ export default function TradingTerminal() {
 
     // CROSSHAIR
     if (xhair && xhair.y < MAIN_H) {
-      ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = pal.crosshair; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
       ctx.beginPath(); ctx.moveTo(xhair.x, PT); ctx.lineTo(xhair.x, MAIN_H + VOL_H); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(LP, xhair.y); ctx.lineTo(W - RP, xhair.y); ctx.stroke();
       ctx.setLineDash([]);
       const hp = fromY(xhair.y);
       if (hp > 0 && xhair.y > PT && xhair.y < MAIN_H) {
-        ctx.fillStyle = "#1e2840"; ctx.fillRect(W - RP, xhair.y - 10, RP - 1, 20);
-        ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 1; ctx.strokeRect(W - RP, xhair.y - 10, RP - 1, 20);
-        ctx.fillStyle = "#c9d5ef"; ctx.textAlign = "center"; ctx.font = "9px 'JetBrains Mono',monospace";
+        ctx.fillStyle = pal.crosshairLabelBg; ctx.fillRect(W - RP, xhair.y - 10, RP - 1, 20);
+        ctx.strokeStyle = pal.borderStrong; ctx.lineWidth = 1; ctx.strokeRect(W - RP, xhair.y - 10, RP - 1, 20);
+        ctx.fillStyle = pal.textPrimary; ctx.textAlign = "center"; ctx.font = "9px 'JetBrains Mono',monospace";
         ctx.fillText(fmt(hp), W - RP + (RP - 1) / 2, xhair.y + 3);
       }
       if (xhair.x > LP && xhair.x < W - RP) {
@@ -1203,8 +1277,8 @@ export default function TradingTerminal() {
         if (idx >= 0 && idx < vis.length) {
           const d = new Date(vis[idx].time);
           const label = tfMode === "intra" ? `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}` : `${d.getDate()}/${d.getMonth() + 1}`;
-          ctx.fillStyle = "#1e2840"; ctx.fillRect(xhair.x - 30, MAIN_H + VOL_H - 18, 60, 15);
-          ctx.fillStyle = "#c9d5ef"; ctx.textAlign = "center"; ctx.font = "9px 'JetBrains Mono',monospace";
+          ctx.fillStyle = pal.crosshairLabelBg; ctx.fillRect(xhair.x - 30, MAIN_H + VOL_H - 18, 60, 15);
+          ctx.fillStyle = pal.textPrimary; ctx.textAlign = "center"; ctx.font = "9px 'JetBrains Mono',monospace";
           ctx.fillText(label, xhair.x, MAIN_H + VOL_H - 8);
         }
       }
@@ -1213,12 +1287,12 @@ export default function TradingTerminal() {
     // OHLCV HEADER
     if (hoverC) {
       const up = hoverC.close >= hoverC.open;
-      ctx.fillStyle = "rgba(11,14,26,0.95)"; ctx.fillRect(LP, 0, W, 24);
+      ctx.fillStyle = pal.ohlcHeaderBg; ctx.fillRect(LP, 0, W, 24);
       ctx.font = "bold 10px 'JetBrains Mono',monospace"; ctx.textAlign = "left";
-      const items = [["O", hoverC.open, "#94a3b8"], ["H", hoverC.high, "#089981"], ["L", hoverC.low, "#f23645"], ["C", hoverC.close, up ? "#089981" : "#f23645"], ["V", fmtVol(hoverC.volume), "#6b7280"]];
+      const items = [["O", hoverC.open, pal.textSecondary], ["H", hoverC.high, "#089981"], ["L", hoverC.low, "#f23645"], ["C", hoverC.close, up ? "#089981" : "#f23645"], ["V", fmtVol(hoverC.volume), pal.textMuted]];
       let xx = LP + 6;
       items.forEach(([l, v, c]) => {
-        ctx.fillStyle = "#4b5563"; ctx.fillText(l + " ", xx, 16); xx += ctx.measureText(l + " ").width;
+        ctx.fillStyle = pal.textFaint; ctx.fillText(l + " ", xx, 16); xx += ctx.measureText(l + " ").width;
         ctx.fillStyle = c; const vs = typeof v === "string" ? v : fmt(v); ctx.fillText(vs + "  ", xx, 16); xx += ctx.measureText(vs + "  ").width;
       });
     }
@@ -1243,7 +1317,7 @@ export default function TradingTerminal() {
       } else if (d.type === "triangle") {
         const mx = (d.x1 + d.x2) / 2; ctx.beginPath(); ctx.moveTo(mx, d.y1); ctx.lineTo(d.x1, d.y2); ctx.lineTo(d.x2, d.y2); ctx.closePath(); ctx.stroke(); ctx.fillStyle = d.color + "0a"; ctx.fill();
       } else if (d.type === "fib") {
-        const cols = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#8b5cf6", "#ec4899", "#94a3b8"];
+        const cols = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#8b5cf6", "#ec4899", pal.textSecondary];
         [0, 0.236, 0.382, 0.5, 0.618, 0.764, 0.786, 1].forEach((lv, li) => {
           const y = d.y1 + (d.y2 - d.y1) * lv; ctx.strokeStyle = cols[li % cols.length] + "99"; ctx.shadowColor = "transparent";
           ctx.beginPath(); ctx.moveTo(Math.min(d.x1, d.x2), y); ctx.lineTo(Math.max(d.x1, d.x2), y); ctx.stroke();
@@ -1255,7 +1329,7 @@ export default function TradingTerminal() {
       } else if (d.type === "measure") {
         ctx.strokeRect(d.x1, d.y1, d.x2 - d.x1, d.y2 - d.y1);
         const p1 = fromY(d.y1), p2 = fromY(d.y2); const pct = ((p2 - p1) / p1 * 100).toFixed(2);
-        ctx.fillStyle = "rgba(18,24,40,0.9)"; ctx.fillRect((d.x1 + d.x2) / 2 - 44, (d.y1 + d.y2) / 2 - 9, 88, 18);
+        ctx.fillStyle = pal.crosshairLabelBg; ctx.fillRect((d.x1 + d.x2) / 2 - 44, (d.y1 + d.y2) / 2 - 9, 88, 18);
         ctx.fillStyle = p2 > p1 ? "#089981" : "#f23645"; ctx.font = "bold 9px 'JetBrains Mono',monospace"; ctx.textAlign = "center";
         ctx.fillText(`${pct}%  Δ${fmt(Math.abs(p2 - p1))}`, (d.x1 + d.x2) / 2, (d.y1 + d.y2) / 2 + 4);
       }
@@ -1273,7 +1347,7 @@ export default function TradingTerminal() {
         ctx.fillText(`SELL @ ${fmt(lastC)}`, LP + 130, cy - 10);
       }
     }
-  }, [candleStore, activeSym, xhair, draws, ct, activeInds, grid, hoverC, instantOrders, barsVisible, viewOffset, logScale, alerts, tfMode]);
+  }, [candleStore, activeSym, xhair, draws, ct, activeInds, grid, hoverC, instantOrders, barsVisible, viewOffset, logScale, alerts, tfMode, pal]);
 
   useEffect(() => { const ro = new ResizeObserver(() => { cancelAnimationFrame(raf.current); raf.current = requestAnimationFrame(drawChart); }); if (cvs.current) ro.observe(cvs.current); return () => { ro.disconnect(); cancelAnimationFrame(raf.current); }; }, [drawChart]);
   useEffect(() => { cancelAnimationFrame(raf.current); raf.current = requestAnimationFrame(drawChart); }, [drawChart]);
@@ -1391,15 +1465,12 @@ Provide concise, actionable analysis. Use bullet points and bold for key levels.
 const handleOrder = useCallback(async (order) => {
     if (!userId) throw new Error("Please log in to place an order");
 
-    // 1. Get the latest candle data for the specific symbol
     const data = candleStore[order.sym] || [];
     const currentVolume = data.length > 0 ? data[data.length - 1].volume : 0;
 
-    // 2. Calculate latest RSI (14 period)
     const rsiArr = computeRSI(data, 14);
     const currentRsi = rsiArr.length > 0 ? rsiArr[rsiArr.length - 1] : null;
 
-    // 3. Calculate latest MACD (12, 26)
     const emaFn = (d, p) => {
       const k = 2 / (p + 1); let e = d[0];
       return d.map(v => { e = v * k + e * (1 - k); return e; });
@@ -1412,7 +1483,6 @@ const handleOrder = useCallback(async (order) => {
       currentMacd = macdL[macdL.length - 1];
     }
 
-    // 4. Calculate latest ADX (14 period) using your terminal's formula
     let currentAdx = null;
     const per = 14;
     if (data.length >= per) {
@@ -1437,7 +1507,6 @@ const handleOrder = useCallback(async (order) => {
       currentAdx = tr ? 100 * Math.abs(pdm - ndm) / tr : 0;
     }
 
-    // 5. Append aiMetrics to the payload
     const resData = await tradingRequest("/user/Orders", {
       method: "POST",
       body: JSON.stringify({
@@ -1517,19 +1586,35 @@ const handleOrder = useCallback(async (order) => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // CSS custom properties consumed by the stylesheet + utility classes above.
+  const cssVars = {
+    "--tx-text-primary": pal.textPrimary,
+    "--tx-text-secondary": pal.textSecondary,
+    "--tx-text-muted": pal.textMuted,
+    "--tx-text-dim": pal.textDim,
+    "--tx-text-faint": pal.textFaint,
+    "--tx-border": pal.border,
+    "--tx-border-strong": pal.borderStrong,
+    "--tx-border-faint": pal.borderFaint,
+    "--tx-hover": pal.hoverBg,
+    "--tx-chip": pal.chipBg,
+    "--tx-input-bg": pal.inputBg,
+    "--tx-toast-bg": pal.toastBg,
+  };
+
   // ── RENDER ────────────────────────────────────────────────────────
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: "#0b0e1a", overflow: "hidden", fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: pal.page, color: pal.textPrimary, overflow: "hidden", fontFamily: "'Inter',sans-serif", ...cssVars }}>
       <style>{STYLES}</style>
 
       {/* ── TOP HEADER ──────────────────────────────────────────────── */}
-      <div style={{ height: 44, background: "#0d1020", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 12px", gap: 0, flexShrink: 0, zIndex: 10 }}>
+      <div style={{ height: 44, background: pal.headerBg, borderBottom: `1px solid ${pal.border}`, display: "flex", alignItems: "center", padding: "0 12px", gap: 0, flexShrink: 0, zIndex: 10 }}>
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 16, borderRight: "1px solid rgba(255,255,255,0.07)", marginRight: 8, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 16, borderRight: `1px solid ${pal.border}`, marginRight: 8, flexShrink: 0 }}>
           <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg,#1a3aff,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px", boxShadow: "0 0 12px rgba(41,98,255,0.4)" }}>TX</div>
        <Link to={"/"}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 12.5, color: "#e2e8f0", letterSpacing: "0.02em" }}>TRADEX PRO</div>
+            <div style={{ fontWeight: 800, fontSize: 12.5, color: pal.textPrimary, letterSpacing: "0.02em" }}>TRADEX PRO</div>
             <div style={{ fontSize: 8, color: "#2962ff", fontWeight: 600, letterSpacing: "0.06em" }}>NEXT GEN TERMINAL</div>
           </div>
        </Link>
@@ -1557,33 +1642,33 @@ const handleOrder = useCallback(async (order) => {
             <span className="live-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#089981", display: "block" }} />
             <span style={{ color: "#089981", fontWeight: 600 }}>MARKETS OPEN</span>
           </div>
-          <div style={{ fontSize: 10.5, color: "#4b5563", fontFamily: "'JetBrains Mono',monospace" }}>
+          <div style={{ fontSize: 10.5, color: pal.textFaint, fontFamily: "'JetBrains Mono',monospace" }}>
             {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </div>
           {/* Global indices ticker */}
           <div style={{ display: "flex", gap: 10, fontSize: 10 }}>
             {[{ n: "NIFTY", v: "23,850", c: true }, { n: "SENSEX", v: "78,400", c: true }, { n: "BTC", v: "$65,020", c: false }].map(x => (
               <div key={x.n} style={{ display: "flex", gap: 4 }}>
-                <span style={{ color: "#4b5563", fontWeight: 600 }}>{x.n}</span>
+                <span style={{ color: pal.textFaint, fontWeight: 600 }}>{x.n}</span>
                 <span className="mono" style={{ color: x.c ? "#089981" : "#f23645", fontWeight: 700 }}>{x.v}</span>
               </div>
             ))}
           </div>
         </div>
 
-
         {/* Action buttons */}
-   <Link to={`/Dashboard/${userId}`}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <ThemeToggle />
           <button onClick={() => setShowRiskCalc(true)} style={{ padding: "4px 10px", borderRadius: 5, fontSize: 10, fontWeight: 600, border: "1px solid rgba(99,130,255,0.25)", color: "#7da8ff", background: "rgba(41,98,255,0.08)" }}>⚖ Risk Calc</button>
           <button onClick={() => setShowAlertDialog(true)} style={{ padding: "4px 10px", borderRadius: 5, fontSize: 10, fontWeight: 600, border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b", background: "rgba(245,158,11,0.06)" }}>⊕ Alert</button>
           <button onClick={() => setShowAI(v => !v)} style={{ padding: "4px 12px", borderRadius: 5, fontSize: 10, fontWeight: 700, border: `1px solid rgba(41,98,255,${showAI ? 0.5 : 0.25})`, color: showAI ? "#fff" : "#7da8ff", background: showAI ? "linear-gradient(135deg,#2962ff,#7c3aed)" : "rgba(41,98,255,0.08)", transition: "all 0.15s" }}>✦ AI</button>
 
+   <Link to={`/Dashboard/${userId}`}>
           {/* User Profile Integration */}
           {selector ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 10, borderLeft: "1px solid rgba(255,255,255,0.1)", marginLeft: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 10, borderLeft: `1px solid ${pal.border}`, marginLeft: 4 }}>
               <div style={{ textAlign: "right", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0", display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: pal.textPrimary, display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
                   {selector.name}
                   <span style={{ fontSize: 8, padding: "2px 5px", borderRadius: 4, background: "rgba(41,98,255,0.2)", color: "#7da8ff", textTransform: "uppercase" }}>{selector.plan}</span>
                 </div>
@@ -1594,52 +1679,52 @@ const handleOrder = useCallback(async (order) => {
               </div>
             </div>
           ) : (
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>👤</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: pal.chipBg, border: `1px solid ${pal.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>👤</div>
           )}
-        </div>
    </Link>
+        </div>
       </div>
 
       {/* ── CHART TOOLBAR ─────────────────────────────────────────────── */}
       {mainView === "chart" && (
-        <div style={{ height: 38, background: "#0f1220", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", padding: "0 6px", gap: 4, flexShrink: 0, overflowX: "auto" }}>
+        <div style={{ height: 38, background: pal.toolbarBg, borderBottom: `1px solid ${pal.borderFaint}`, display: "flex", alignItems: "center", padding: "0 6px", gap: 4, flexShrink: 0, overflowX: "auto" }}>
           {/* Symbol search */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "3px 8px", minWidth: 140, marginRight: 4 }}>
-            <span style={{ color: "#4b5563", fontSize: 12 }}>⌕</span>
-            <span style={{ fontWeight: 700, fontSize: 11.5, color: "#e2e8f0" }}>{activeSym.sym}</span>
-            <span style={{ fontSize: 9, color: "#374151", fontFamily: "'JetBrains Mono',monospace" }}>{activeSym.exch}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: pal.inputBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 5, padding: "3px 8px", minWidth: 140, marginRight: 4 }}>
+            <span style={{ color: pal.textFaint, fontSize: 12 }}>⌕</span>
+            <span style={{ fontWeight: 700, fontSize: 11.5, color: pal.textPrimary }}>{activeSym.sym}</span>
+            <span style={{ fontSize: 9, color: pal.textDim, fontFamily: "'JetBrains Mono',monospace" }}>{activeSym.exch}</span>
           </div>
 
           {/* Price display */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, paddingRight: 10, borderRight: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, paddingRight: 10, borderRight: `1px solid ${pal.borderFaint}`, flexShrink: 0 }}>
             <span className="mono" style={{ fontSize: 15, fontWeight: 800, color: isUp ? "#089981" : "#f23645" }}>{fmt(activePrice)}</span>
             <span className={isUp ? "badge-up" : "badge-dn"}>{isUp ? "▲" : "▼"} {Math.abs(activeChgPct).toFixed(2)}%</span>
             <span className="mono" style={{ fontSize: 10, color: activeChg >= 0 ? "#089981" : "#f23645" }}>{activeChg >= 0 ? "+" : ""}{fmt(activeChg)}</span>
           </div>
 
           {/* Timeframe */}
-          <div style={{ display: "flex", gap: 1, padding: "2px", background: "rgba(255,255,255,0.03)", borderRadius: 5, border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", gap: 1, padding: "2px", background: pal.chipBg, borderRadius: 5, border: `1px solid ${pal.borderFaint}` }}>
             {["intra", "day"].map(m => (
-              <button key={m} onClick={() => { setTfMode(m); setTf(m === "intra" ? "5m" : "1D"); }} style={{ padding: "2px 7px", borderRadius: 3, fontSize: 9.5, fontWeight: 700, background: tfMode === m ? "rgba(255,255,255,0.1)" : "transparent", color: tfMode === m ? "#e2e8f0" : "#4b5563", transition: "all 0.1s" }}>{m === "intra" ? "INTRA" : "DAILY"}</button>
+              <button key={m} onClick={() => { setTfMode(m); setTf(m === "intra" ? "5m" : "1D"); }} style={{ padding: "2px 7px", borderRadius: 3, fontSize: 9.5, fontWeight: 700, background: tfMode === m ? pal.borderStrong : "transparent", color: tfMode === m ? pal.textPrimary : pal.textFaint, transition: "all 0.1s" }}>{m === "intra" ? "INTRA" : "DAILY"}</button>
             ))}
           </div>
           {(tfMode === "intra" ? TF_INTRA : TF_DAY).map(t => (
-            <button key={t} onClick={() => setTf(t)} style={{ padding: "2px 7px", borderRadius: 3, fontSize: 10, fontWeight: tf === t ? 700 : 500, background: tf === t ? "rgba(41,98,255,0.18)" : "transparent", color: tf === t ? "#7da8ff" : "#4b5563", border: `1px solid ${tf === t ? "rgba(41,98,255,0.35)" : "transparent"}`, transition: "all 0.1s" }}>{t}</button>
+            <button key={t} onClick={() => setTf(t)} style={{ padding: "2px 7px", borderRadius: 3, fontSize: 10, fontWeight: tf === t ? 700 : 500, background: tf === t ? "rgba(41,98,255,0.18)" : "transparent", color: tf === t ? "#7da8ff" : pal.textFaint, border: `1px solid ${tf === t ? "rgba(41,98,255,0.35)" : "transparent"}`, transition: "all 0.1s" }}>{t}</button>
           ))}
 
-          <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.06)", margin: "0 3px" }} />
+          <div style={{ width: 1, height: 20, background: pal.border, margin: "0 3px" }} />
 
           {/* Chart type */}
           <div style={{ position: "relative" }}>
-            <button onClick={() => setShowChartTypeMenu(v => !v)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 4, fontSize: 10.5, fontWeight: 600, border: "1px solid rgba(255,255,255,0.08)", color: "#94a3b8", background: showChartTypeMenu ? "rgba(255,255,255,0.06)" : "transparent" }}>
+            <button onClick={() => setShowChartTypeMenu(v => !v)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 4, fontSize: 10.5, fontWeight: 600, border: `1px solid ${pal.border}`, color: pal.textSecondary, background: showChartTypeMenu ? pal.hoverBg : "transparent" }}>
               <span>{CHART_TYPES.find(c => c.id === ct)?.icon}</span>
               <span>{CHART_TYPES.find(c => c.id === ct)?.label}</span>
               <span style={{ fontSize: 8, opacity: 0.5 }}>▼</span>
             </button>
             {showChartTypeMenu && (
-              <div className="fade-up" style={{ position: "absolute", top: 34, left: 0, zIndex: 200, background: "#1a1e30", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 6, boxShadow: "0 8px 32px rgba(0,0,0,0.6)", minWidth: 140 }}>
+              <div className="fade-up" style={{ position: "absolute", top: 34, left: 0, zIndex: 200, background: pal.dropdownBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 8, padding: 6, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", minWidth: 140 }}>
                 {CHART_TYPES.map(c => (
-                  <button key={c.id} onClick={() => { setCt(c.id); setShowChartTypeMenu(false); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "5px 8px", borderRadius: 4, fontSize: 11, fontWeight: ct === c.id ? 700 : 400, color: ct === c.id ? "#7da8ff" : "#94a3b8", background: ct === c.id ? "rgba(41,98,255,0.1)" : "transparent" }}>
+                  <button key={c.id} onClick={() => { setCt(c.id); setShowChartTypeMenu(false); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "5px 8px", borderRadius: 4, fontSize: 11, fontWeight: ct === c.id ? 700 : 400, color: ct === c.id ? "#7da8ff" : pal.textSecondary, background: ct === c.id ? "rgba(41,98,255,0.1)" : "transparent" }}>
                     <span>{c.icon}</span>{c.label}
                   </button>
                 ))}
@@ -1648,7 +1733,7 @@ const handleOrder = useCallback(async (order) => {
           </div>
 
           {/* Indicators */}
-          <button onClick={() => setShowIndPanel(v => !v)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 4, fontSize: 10.5, fontWeight: 600, border: `1px solid rgba(255,255,255,${showIndPanel ? 0.15 : 0.07})`, color: showIndPanel ? "#7da8ff" : "#6b7280", background: showIndPanel ? "rgba(41,98,255,0.1)" : "transparent" }}>
+          <button onClick={() => setShowIndPanel(v => !v)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 4, fontSize: 10.5, fontWeight: 600, border: `1px solid ${showIndPanel ? pal.borderStrong : pal.border}`, color: showIndPanel ? "#7da8ff" : pal.textMuted, background: showIndPanel ? "rgba(41,98,255,0.1)" : "transparent" }}>
             ƒ Indicators {activeInds.length > 0 && <span style={{ fontSize: 9, background: "#2962ff", borderRadius: 10, padding: "0 5px", color: "#fff" }}>{activeInds.length}</span>}
           </button>
 
@@ -1656,20 +1741,20 @@ const handleOrder = useCallback(async (order) => {
 
           {/* Quick Buy/Sell */}
           <button className="buy-btn" style={{ padding: "4px 14px", fontSize: 11 }} onClick={() => { console.log("Buy button clicked"); setShowOrderDialog({ side: "BUY", price: activePrice }); }}>B</button>
-          <input value={orderQty} onChange={e => setOrderQty(e.target.value)} type="number" min="1" style={{ width: 36, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, padding: "3px 6px", fontSize: 11, color: "#f1f5f9", textAlign: "center", fontFamily: "'JetBrains Mono',monospace" }} />
+          <input value={orderQty} onChange={e => setOrderQty(e.target.value)} type="number" min="1" style={{ width: 36, background: pal.inputBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 3, padding: "3px 6px", fontSize: 11, color: pal.textHeading, textAlign: "center", fontFamily: "'JetBrains Mono',monospace" }} />
           <button className="sell-btn" style={{ padding: "4px 14px", fontSize: 11 }} onClick={() => { console.log("Sell button clicked"); setShowOrderDialog({ side: "SELL", price: activePrice }); }}>S</button>
-          <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.06)", margin: "0 3px" }} />
+          <div style={{ width: 1, height: 20, background: pal.border, margin: "0 3px" }} />
 
           {/* Options */}
-          <button onClick={() => setGrid(v => !v)} className="tool-btn" title="Grid" style={{ color: grid ? "#7da8ff" : "#374151", width: 24, height: 24, fontSize: 11 }}>⊞</button>
+          <button onClick={() => setGrid(v => !v)} className="tool-btn" title="Grid" style={{ color: grid ? "#7da8ff" : pal.textDim, width: 24, height: 24, fontSize: 11 }}>⊞</button>
           <button onClick={() => setLogScale(v => !v)} className={`tool-btn ${logScale ? "tool-active" : ""}`} title="Log Scale" style={{ width: 28, height: 24, fontSize: 9.5, fontWeight: 700 }}>LOG</button>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 9.5, color: "#374151", fontWeight: 600 }}>Instant</span>
+            <span style={{ fontSize: 9.5, color: pal.textDim, fontWeight: 600 }}>Instant</span>
             <div className={`toggle ${instantOrders ? "toggle-on" : "toggle-off"}`} onClick={() => setInstantOrders(v => !v)}><div className="toggle-thumb" style={{ transform: instantOrders ? "translateX(13px)" : "translateX(0)" }} /></div>
           </div>
           <button className="tool-btn" onClick={() => setDraws(p => p.slice(0, -1))} title="Undo" style={{ width: 24, height: 24, fontSize: 13 }}>↩</button>
           <button className="tool-btn" onClick={() => setDraws([])} title="Clear All" style={{ width: 24, height: 24, fontSize: 12 }}>🗑</button>
-          <button onClick={() => setScalerMode(v => !v)} className={scalperMode ? "scalper-pulse" : ""} style={{ padding: "3px 10px", borderRadius: 4, fontSize: 9.5, fontWeight: 700, border: `1px solid ${scalperMode ? "rgba(41,98,255,0.5)" : "rgba(255,255,255,0.07)"}`, background: scalperMode ? "rgba(41,98,255,0.14)" : "transparent", color: scalperMode ? "#60a5fa" : "#6b7280", flexShrink: 0 }}>
+          <button onClick={() => setScalerMode(v => !v)} className={scalperMode ? "scalper-pulse" : ""} style={{ padding: "3px 10px", borderRadius: 4, fontSize: 9.5, fontWeight: 700, border: `1px solid ${scalperMode ? "rgba(41,98,255,0.5)" : pal.border}`, background: scalperMode ? "rgba(41,98,255,0.14)" : "transparent", color: scalperMode ? "#60a5fa" : pal.textMuted, flexShrink: 0 }}>
             ⚡ {scalperMode ? "SCALPER ON" : "SCALPER"}
           </button>
         </div>
@@ -1677,11 +1762,11 @@ const handleOrder = useCallback(async (order) => {
 
       {/* ── INDICATOR PANEL ───────────────────────────────────────────── */}
       {showIndPanel && mainView === "chart" && (
-        <div className="fade-up" style={{ position: "absolute", top: 82, left: 200, zIndex: 200, background: "#181c2e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: 14, width: 340, boxShadow: "0 16px 48px rgba(0,0,0,0.65)" }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "#4b5563", textTransform: "uppercase", marginBottom: 10 }}>Technical Indicators</div>
+        <div className="fade-up" style={{ position: "absolute", top: 82, left: 200, zIndex: 200, background: pal.indPanelBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 12, padding: 14, width: 340, boxShadow: "0 16px 48px rgba(0,0,0,0.3)" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: pal.textFaint, textTransform: "uppercase", marginBottom: 10 }}>Technical Indicators</div>
           {["overlay", "vol", "sub"].map(type => (
             <div key={type} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 8.5, color: "#374151", fontWeight: 700, textTransform: "uppercase", marginBottom: 5 }}>{type === "overlay" ? "Overlay" : type === "vol" ? "Volume" : "Oscillators"}</div>
+              <div style={{ fontSize: 8.5, color: pal.textDim, fontWeight: 700, textTransform: "uppercase", marginBottom: 5 }}>{type === "overlay" ? "Overlay" : type === "vol" ? "Volume" : "Oscillators"}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
                 {INDICATORS_LIST.filter(i => i.type === type).map(ind => (
                   <button key={ind.id} className={`ind-chip ${activeInds.includes(ind.id) ? "ind-on" : ""}`} onClick={() => setActiveInds(p => p.includes(ind.id) ? p.filter(x => x !== ind.id) : [...p, ind.id])}>
@@ -1694,7 +1779,7 @@ const handleOrder = useCallback(async (order) => {
             </div>
           ))}
           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-            <button onClick={() => { setActiveInds([]); }} style={{ flex: 1, padding: "4px 0", borderRadius: 4, border: "1px solid rgba(255,255,255,0.07)", color: "#6b7280", fontSize: 10 }}>Clear</button>
+            <button onClick={() => { setActiveInds([]); }} style={{ flex: 1, padding: "4px 0", borderRadius: 4, border: `1px solid ${pal.border}`, color: pal.textMuted, fontSize: 10 }}>Clear</button>
             <button onClick={() => setShowIndPanel(false)} style={{ flex: 1, padding: "4px 0", borderRadius: 4, background: "rgba(41,98,255,0.12)", border: "1px solid rgba(41,98,255,0.25)", color: "#7da8ff", fontSize: 10, fontWeight: 600 }}>Done</button>
           </div>
         </div>
@@ -1705,42 +1790,42 @@ const handleOrder = useCallback(async (order) => {
 
         {/* ── LEFT TOOLBAR ── */}
         {mainView === "chart" && (
-          <div style={{ width: 40, background: "#0d1020", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", padding: "6px 0", gap: 2, flexShrink: 0, overflowY: "auto", zIndex: 5 }}>
+          <div style={{ width: 40, background: pal.leftBarBg, borderRight: `1px solid ${pal.border}`, display: "flex", flexDirection: "column", alignItems: "center", padding: "6px 0", gap: 2, flexShrink: 0, overflowY: "auto", zIndex: 5 }}>
             {DRAW_TOOLS.map(t => (
               <button key={t.id} title={t.tip} className={`tool-btn ${tool === t.id ? "tool-active" : ""}`} onClick={() => setTool(t.id)} style={{ width: 32, height: 32 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={t.svg} /></svg>
               </button>
             ))}
             <div style={{ flex: 1 }} />
-            <div style={{ width: 20, height: 1, background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
-            {["#2962ff", "#089981", "#f23645", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ffffff", "#64748b"].map(c => (
+            <div style={{ width: 20, height: 1, background: pal.border, margin: "4px 0" }} />
+            {["#2962ff", "#089981", "#f23645", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", theme === "dark" ? "#ffffff" : "#0f172a", "#64748b"].map(c => (
               <button key={c} onClick={() => setDColor(c)} title={c}
-                style={{ width: 16, height: 16, borderRadius: "50%", background: c, border: `2.5px solid ${dColor === c ? "rgba(255,255,255,0.9)" : "transparent"}`, margin: "1.5px 0", boxShadow: dColor === c ? `0 0 8px ${c}` : "" }} />
+                style={{ width: 16, height: 16, borderRadius: "50%", background: c, border: `2.5px solid ${dColor === c ? "rgba(41,98,255,0.9)" : "transparent"}`, margin: "1.5px 0", boxShadow: dColor === c ? `0 0 8px ${c}` : "" }} />
             ))}
             <div style={{ height: 6 }} />
           </div>
         )}
 
         {/* ── CHART / MAIN VIEW AREA ── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", background: "#0f1117" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", background: pal.canvasBg }}>
           {mainView === "chart" && (
             <>
               {/* Symbol bar */}
-              <div style={{ padding: "4px 12px 4px", background: "#131722", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <div style={{ padding: "4px 12px 4px", background: pal.panelBg, borderBottom: `1px solid ${pal.borderFaint}`, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontWeight: 800, fontSize: 13, color: "#f1f5f9" }}>{activeSym.sym}</span>
-                  <span style={{ fontSize: 9, color: "#4b5563", fontFamily: "'JetBrains Mono',monospace", border: "1px solid rgba(255,255,255,0.07)", padding: "1px 5px", borderRadius: 3 }}>{activeSym.exch}</span>
-                  <span style={{ fontSize: 9, color: "#4b5563" }}>{activeSym.name}</span>
+                  <span style={{ fontWeight: 800, fontSize: 13, color: pal.textHeading }}>{activeSym.sym}</span>
+                  <span style={{ fontSize: 9, color: pal.textFaint, fontFamily: "'JetBrains Mono',monospace", border: `1px solid ${pal.border}`, padding: "1px 5px", borderRadius: 3 }}>{activeSym.exch}</span>
+                  <span style={{ fontSize: 9, color: pal.textFaint }}>{activeSym.name}</span>
                 </div>
                 <div className="mono" style={{ fontSize: 16, fontWeight: 800, color: isUp ? "#089981" : "#f23645" }}>{fmt(activePrice)}</div>
                 <span className={isUp ? "badge-up" : "badge-dn"}>{isUp ? "▲" : "▼"} {Math.abs(activeChgPct).toFixed(2)}%</span>
                 <span className="mono" style={{ fontSize: 10, color: activeChg >= 0 ? "#089981" : "#f23645" }}>{activeChg >= 0 ? "+" : ""}{fmt(activeChg)}</span>
                 {hoverC && (
                   <div style={{ display: "flex", gap: 8 }}>
-                    {[["O", hoverC.open, "#94a3b8"], ["H", hoverC.high, "#089981"], ["L", hoverC.low, "#f23645"], ["C", hoverC.close, hoverC.close >= hoverC.open ? "#089981" : "#f23645"]].map(([l, v, c]) => (
-                      <span key={l} className="mono" style={{ fontSize: 10.5 }}><span style={{ color: "#6b7280" }}>{l} </span><span style={{ color: c, fontWeight: 600 }}>{fmt(v)}</span></span>
+                    {[["O", hoverC.open, pal.textSecondary], ["H", hoverC.high, "#089981"], ["L", hoverC.low, "#f23645"], ["C", hoverC.close, hoverC.close >= hoverC.open ? "#089981" : "#f23645"]].map(([l, v, c]) => (
+                      <span key={l} className="mono" style={{ fontSize: 10.5 }}><span style={{ color: pal.textMuted }}>{l} </span><span style={{ color: c, fontWeight: 600 }}>{fmt(v)}</span></span>
                     ))}
-                    <span className="mono" style={{ fontSize: 10, color: "#6b7280" }}>Vol <span style={{ color: "#94a3b8" }}>{fmtVol(hoverC.volume)}</span></span>
+                    <span className="mono" style={{ fontSize: 10, color: pal.textMuted }}>Vol <span style={{ color: pal.textSecondary }}>{fmtVol(hoverC.volume)}</span></span>
                   </div>
                 )}
                 <div style={{ flex: 1 }} />
@@ -1761,21 +1846,21 @@ const handleOrder = useCallback(async (order) => {
                 />
                 {/* Zoom controls */}
                 <div style={{ position: "absolute", bottom: 6, left: 10, display: "flex", alignItems: "center", gap: 5 }}>
-                  <button onClick={() => setBarsVisible(v => clamp(Math.round(v * 0.8), 20, 700))} style={{ width: 22, height: 22, borderRadius: 4, background: "rgba(255,255,255,0.07)", color: "#7da8ff", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,0.08)" }}>+</button>
-                  <span style={{ fontSize: 9, color: "#374151", fontFamily: "'JetBrains Mono',monospace" }}>{barsVisible}b</span>
-                  <button onClick={() => setBarsVisible(v => clamp(Math.round(v * 1.25), 20, 700))} style={{ width: 22, height: 22, borderRadius: 4, background: "rgba(255,255,255,0.07)", color: "#7da8ff", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,0.08)" }}>−</button>
-                  <button onClick={() => { setViewOffset(0); setBarsVisible(120); }} style={{ width: 22, height: 22, borderRadius: 4, background: "rgba(255,255,255,0.07)", color: "#7da8ff", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,0.08)" }}>⊙</button>
+                  <button onClick={() => setBarsVisible(v => clamp(Math.round(v * 0.8), 20, 700))} style={{ width: 22, height: 22, borderRadius: 4, background: pal.chipBg, color: "#7da8ff", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${pal.border}` }}>+</button>
+                  <span style={{ fontSize: 9, color: pal.textDim, fontFamily: "'JetBrains Mono',monospace" }}>{barsVisible}b</span>
+                  <button onClick={() => setBarsVisible(v => clamp(Math.round(v * 1.25), 20, 700))} style={{ width: 22, height: 22, borderRadius: 4, background: pal.chipBg, color: "#7da8ff", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${pal.border}` }}>−</button>
+                  <button onClick={() => { setViewOffset(0); setBarsVisible(120); }} style={{ width: 22, height: 22, borderRadius: 4, background: pal.chipBg, color: "#7da8ff", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${pal.border}` }}>⊙</button>
                 </div>
-                <div style={{ position: "absolute", bottom: 6, right: 84, fontSize: 8.5, color: "#2a3345", fontFamily: "'JetBrains Mono',monospace" }}>Scroll=zoom · Drag=pan · Double-click=H-line · Hotkeys: T H V R F</div>
+                <div style={{ position: "absolute", bottom: 6, right: 84, fontSize: 8.5, color: pal.textGhost, fontFamily: "'JetBrains Mono',monospace" }}>Scroll=zoom · Drag=pan · Double-click=H-line · Hotkeys: T H V R F</div>
               </div>
 
               {/* BOTTOM PANEL */}
-              <div style={{ background: "#131722", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", height: 32, padding: "0 8px", borderBottom: "1px solid rgba(55,255,255,0.04)" }}>
+              <div style={{ background: pal.panelBg, borderTop: `1px solid ${pal.border}`, flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", height: 32, padding: "0 8px", borderBottom: `1px solid ${pal.borderFaint}` }}>
                   {[["pos", "Positions", positions.length], ["orders", "Orders", orders.filter(o => o.status === "OPEN").length], ["hist", "Trade History", null], ["alerts", "Alerts", alerts.length], ["news", "News", null], ["depth2", "Depth", null]].map(([id, l, cnt]) => (
                     <button key={id} onClick={() => setBottomPanel(v => v === id ? null : id)}
-                      style={{ padding: "0 10px", height: "100%", fontSize: 10.5, fontWeight: 500, borderBottom: `2px solid ${bottomPanel === id ? "#2962ff" : "transparent"}`, color: bottomPanel === id ? "#e2e8f0" : "#6b7280", transition: "all 0.12s", whiteSpace: "nowrap" }}>
-                      {l}{cnt != null && <span style={{ marginLeft: 4, padding: "0 4px", borderRadius: 8, fontSize: 8, background: cnt > 0 ? "rgba(41,98,255,0.15)" : "rgba(255,255,255,0.06)", color: cnt > 0 ? "#60a5fa" : "#6b7280" }}>{cnt}</span>}
+                      style={{ padding: "0 10px", height: "100%", fontSize: 10.5, fontWeight: 500, borderBottom: `2px solid ${bottomPanel === id ? "#2962ff" : "transparent"}`, color: bottomPanel === id ? pal.textPrimary : pal.textMuted, transition: "all 0.12s", whiteSpace: "nowrap" }}>
+                      {l}{cnt != null && <span style={{ marginLeft: 4, padding: "0 4px", borderRadius: 8, fontSize: 8, background: cnt > 0 ? "rgba(41,98,255,0.15)" : pal.chipBg, color: cnt > 0 ? "#60a5fa" : pal.textMuted }}>{cnt}</span>}
                     </button>
                   ))}
                   <div style={{ flex: 1 }} />
@@ -1794,17 +1879,17 @@ const handleOrder = useCallback(async (order) => {
                             const pnl = (lv.price - p.avg) * p.qty;
                             const pct = (pnl / Math.abs(p.avg * p.qty)) * 100;
                             return <tr key={i} className="t-row">
-                              <td className="t-cell" style={{ fontWeight: 600, color: "#f1f5f9" }}>{p.sym}</td>
-                              <td className="t-cell" style={{ fontSize: 9, color: p.product === "MIS" ? "#f59e0b" : "#6b7280", fontWeight: 700 }}>{p.product || "MIS"}</td>
-                              <td className="t-cell" style={{ color: "#374151", fontSize: 9 }}>{p.exch}</td>
+                              <td className="t-cell" style={{ fontWeight: 600, color: pal.textHeading }}>{p.sym}</td>
+                              <td className="t-cell" style={{ fontSize: 9, color: p.product === "MIS" ? "#f59e0b" : pal.textMuted, fontWeight: 700 }}>{p.product || "MIS"}</td>
+                              <td className="t-cell" style={{ color: pal.textDim, fontSize: 9 }}>{p.exch}</td>
                               <td className="t-cell mono">{Math.abs(p.qty)}</td>
-                              <td className="t-cell mono" style={{ color: "#94a3b8" }}>₹{fmt(p.avg)}</td>
+                              <td className="t-cell mono" style={{ color: pal.textSecondary }}>₹{fmt(p.avg)}</td>
                               <td className="t-cell mono" style={{ fontWeight: 600 }}>₹{fmt(lv.price)}</td>
                               <td className="t-cell mono" style={{ color: pnl >= 0 ? "#089981" : "#f23645", fontWeight: 700 }}>{pnl >= 0 ? "+" : ""}₹{fmt(Math.abs(pnl))}</td>
                               <td className="t-cell mono" style={{ color: pct >= 0 ? "#089981" : "#f23645" }}>{pct.toFixed(2)}%</td>
                               <td className="t-cell"><div style={{ display: "flex", gap: 4 }}>
                                 <button onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setShowOrderDialog({ sym: p.sym, name: p.name, exch: p.exch, product: p.product, qty: Math.abs(p.qty), side: p.side === "long" ? "SELL" : "BUY", price: lv.price }); }} style={{ padding: "2px 8px", fontSize: 9, borderRadius: 3, background: "rgba(242,54,69,0.1)", border: "1px solid rgba(242,54,69,0.2)", color: "#f23645", fontWeight: 600 }}>Exit</button>
-                                <button onClick={() => setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym)} style={{ padding: "2px 8px", fontSize: 9, borderRadius: 3, border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>Chart</button>
+                                <button onClick={() => setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym)} style={{ padding: "2px 8px", fontSize: 9, borderRadius: 3, border: `1px solid ${pal.border}`, color: pal.textMuted }}>Chart</button>
                               </div></td>
                             </tr>;
                           })}
@@ -1817,15 +1902,15 @@ const handleOrder = useCallback(async (order) => {
                         <tbody>
                           {orders.map((o, i) => (
                             <tr key={i} className="t-row">
-                              <td className="t-cell mono" style={{ color: "#374151", fontSize: 9 }}>{o.id}</td>
-                              <td className="t-cell" style={{ fontWeight: 600, color: "#f1f5f9" }}>{o.sym}</td>
-                              <td className="t-cell" style={{ fontSize: 9, color: "#6b7280" }}>{o.product || "MIS"}</td>
+                              <td className="t-cell mono" style={{ color: pal.textDim, fontSize: 9 }}>{o.id}</td>
+                              <td className="t-cell" style={{ fontWeight: 600, color: pal.textHeading }}>{o.sym}</td>
+                              <td className="t-cell" style={{ fontSize: 9, color: pal.textMuted }}>{o.product || "MIS"}</td>
                               <td className="t-cell mono" style={{ fontSize: 10 }}>{o.type}</td>
                               <td className="t-cell"><span style={{ padding: "1px 6px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: o.side === "BUY" ? "rgba(8,153,129,0.12)" : "rgba(242,54,69,0.12)", color: o.side === "BUY" ? "#089981" : "#f23645" }}>{o.side}</span></td>
                               <td className="t-cell mono">{o.qty}</td>
-                              <td className="t-cell mono" style={{ color: "#94a3b8" }}>{o.price > 0 ? `₹${fmt(o.price)}` : "Market"}</td>
-                              <td className="t-cell"><span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: o.status === "OPEN" ? "rgba(245,158,11,0.12)" : o.status === "COMPLETE" ? "rgba(8,153,129,0.12)" : "rgba(100,116,139,0.12)", color: o.status === "OPEN" ? "#f59e0b" : o.status === "COMPLETE" ? "#089981" : "#6b7280" }}>{o.status}</span></td>
-                              <td className="t-cell mono" style={{ color: "#374151", fontSize: 9.5 }}>{o.time}</td>
+                              <td className="t-cell mono" style={{ color: pal.textSecondary }}>{o.price > 0 ? `₹${fmt(o.price)}` : "Market"}</td>
+                              <td className="t-cell"><span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: o.status === "OPEN" ? "rgba(245,158,11,0.12)" : o.status === "COMPLETE" ? "rgba(8,153,129,0.12)" : "rgba(100,116,139,0.12)", color: o.status === "OPEN" ? "#f59e0b" : o.status === "COMPLETE" ? "#089981" : pal.textMuted }}>{o.status}</span></td>
+                              <td className="t-cell mono" style={{ color: pal.textDim, fontSize: 9.5 }}>{o.time}</td>
                               <td className="t-cell">{o.status === "OPEN" && <button onClick={() => handleCancelOrder(o)} style={{ padding: "2px 6px", fontSize: 9, borderRadius: 3, border: "1px solid rgba(242,54,69,0.2)", color: "#f23645" }}>Cancel</button>}</td>
                             </tr>
                           ))}
@@ -1834,16 +1919,16 @@ const handleOrder = useCallback(async (order) => {
                     )}
                     {bottomPanel === "alerts" && (
                       <div style={{ padding: "6px 12px" }}>
-                        {alerts.length === 0 ? <div style={{ color: "#374151", fontSize: 11, padding: "20px 0", textAlign: "center" }}>No alerts. Click ⊕ Alert to add one.</div> :
+                        {alerts.length === 0 ? <div style={{ color: pal.textDim, fontSize: 11, padding: "20px 0", textAlign: "center" }}>No alerts. Click ⊕ Alert to add one.</div> :
                           alerts.map((a, i) => (
-                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: `1px solid ${pal.borderFaint}` }}>
                               <span style={{ color: "#f59e0b", fontSize: 13 }}>⊕</span>
-                              <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: 11 }}>{a.sym}</span>
-                              <span style={{ color: "#6b7280", fontSize: 10 }}>{a.condition?.replace(/_/g, " ")}</span>
+                              <span style={{ fontWeight: 600, color: pal.textHeading, fontSize: 11 }}>{a.sym}</span>
+                              <span style={{ color: pal.textMuted, fontSize: 10 }}>{a.condition?.replace(/_/g, " ")}</span>
                               <span className="mono" style={{ color: "#f59e0b", fontWeight: 700, fontSize: 11 }}>₹{fmt(a.price)}</span>
-                              <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "rgba(255,255,255,0.05)", color: "#6b7280" }}>{a.alertType}</span>
-                              {a.note && <span style={{ color: "#374151", fontSize: 10, fontStyle: "italic" }}>{a.note}</span>}
-                              <button onClick={() => setAlerts(p => p.filter((_, j) => j !== i))} style={{ marginLeft: "auto", color: "#374151", fontSize: 13 }}>✕</button>
+                              <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: pal.chipBg, color: pal.textMuted }}>{a.alertType}</span>
+                              {a.note && <span style={{ color: pal.textDim, fontSize: 10, fontStyle: "italic" }}>{a.note}</span>}
+                              <button onClick={() => setAlerts(p => p.filter((_, j) => j !== i))} style={{ marginLeft: "auto", color: pal.textDim, fontSize: 13 }}>✕</button>
                             </div>
                           ))
                         }
@@ -1859,10 +1944,10 @@ const handleOrder = useCallback(async (order) => {
                         { sym: "HDFCBANK", time: "10:20", text: "RBI approves branch expansion plan; analyst upgrades to BUY with ₹1,900 target", sentiment: "positive" },
                         ].map((n, i) => (
                           <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                            <span style={{ fontSize: 9, color: "#374151", fontFamily: "'JetBrains Mono',monospace", flexShrink: 0, marginTop: 1 }}>{n.time}</span>
+                            <span style={{ fontSize: 9, color: pal.textDim, fontFamily: "'JetBrains Mono',monospace", flexShrink: 0, marginTop: 1 }}>{n.time}</span>
                             <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "rgba(41,98,255,0.1)", color: "#60a5fa", fontWeight: 700, flexShrink: 0 }}>{n.sym}</span>
-                            <span style={{ fontSize: 10.5, color: "#94a3b8" }}>{n.text}</span>
-                            <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 10, flexShrink: 0, background: n.sentiment === "positive" ? "rgba(8,153,129,0.1)" : n.sentiment === "negative" ? "rgba(242,54,69,0.1)" : "rgba(255,255,255,0.05)", color: n.sentiment === "positive" ? "#10b981" : n.sentiment === "negative" ? "#f23645" : "#6b7280" }}>{n.sentiment}</span>
+                            <span style={{ fontSize: 10.5, color: pal.textSecondary }}>{n.text}</span>
+                            <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 10, flexShrink: 0, background: n.sentiment === "positive" ? "rgba(8,153,129,0.1)" : n.sentiment === "negative" ? "rgba(242,54,69,0.1)" : pal.chipBg, color: n.sentiment === "positive" ? "#10b981" : n.sentiment === "negative" ? "#f23645" : pal.textMuted }}>{n.sentiment}</span>
                           </div>
                         ))}
                       </div>
@@ -1879,7 +1964,7 @@ const handleOrder = useCallback(async (order) => {
                             <tbody>
                               {[...bids].reverse().map((b, i) => (
                                 <tr key={i} className="t-row" style={{ position: "relative" }}>
-                                  <td className="t-cell mono" style={{ textAlign: "right", color: "#6b7280", fontSize: 9 }}>{b.orders}</td>
+                                  <td className="t-cell mono" style={{ textAlign: "right", color: pal.textMuted, fontSize: 9 }}>{b.orders}</td>
                                   <td className="t-cell mono" style={{ textAlign: "right", color: "#089981", fontWeight: 600 }}>{b.qty}</td>
                                   <td className="t-cell mono" style={{ textAlign: "right", color: "#089981", fontWeight: 700, position: "relative" }}>
                                     <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: `${(b.qty / maxQ) * 60}%`, background: "rgba(8,153,129,0.1)", pointerEvents: "none" }} />
@@ -1889,7 +1974,7 @@ const handleOrder = useCallback(async (order) => {
                               ))}
                             </tbody>
                           </table>
-                          <div style={{ width: 1, background: "rgba(255,255,255,0.05)" }} />
+                          <div style={{ width: 1, background: pal.border }} />
                           <table style={{ flex: 1, borderCollapse: "collapse" }}>
                             <thead><tr>{["Ask Price", "Qty", "Orders"].map(h => <th key={h} className="t-head">{h}</th>)}</tr></thead>
                             <tbody>
@@ -1900,7 +1985,7 @@ const handleOrder = useCallback(async (order) => {
                                     {fmt(a.price)}
                                   </td>
                                   <td className="t-cell mono" style={{ color: "#f23645", fontWeight: 600 }}>{a.qty}</td>
-                                  <td className="t-cell mono" style={{ color: "#6b7280", fontSize: 9 }}>{a.orders}</td>
+                                  <td className="t-cell mono" style={{ color: pal.textMuted, fontSize: 9 }}>{a.orders}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1914,12 +1999,12 @@ const handleOrder = useCallback(async (order) => {
                         <tbody>
                           {[...journalEntries].reverse().map((e, i) => (
                             <tr key={i} className="t-row">
-                              <td className="t-cell mono" style={{ color: "#374151", fontSize: 9 }}>{e.date}</td>
-                              <td className="t-cell" style={{ fontWeight: 600, color: "#f1f5f9" }}>{e.sym}</td>
+                              <td className="t-cell mono" style={{ color: pal.textDim, fontSize: 9 }}>{e.date}</td>
+                              <td className="t-cell" style={{ fontWeight: 600, color: pal.textHeading }}>{e.sym}</td>
                               <td className="t-cell"><span style={{ padding: "1px 6px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: e.side === "BUY" ? "rgba(8,153,129,0.12)" : "rgba(242,54,69,0.12)", color: e.side === "BUY" ? "#089981" : "#f23645" }}>{e.side}</span></td>
                               <td className="t-cell mono">{e.qty}</td>
-                              <td className="t-cell mono" style={{ color: "#94a3b8" }}>₹{e.entry}</td>
-                              <td className="t-cell mono" style={{ color: "#94a3b8" }}>₹{e.exit}</td>
+                              <td className="t-cell mono" style={{ color: pal.textSecondary }}>₹{e.entry}</td>
+                              <td className="t-cell mono" style={{ color: pal.textSecondary }}>₹{e.exit}</td>
                               <td className="t-cell mono" style={{ color: e.pnl >= 0 ? "#089981" : "#f23645", fontWeight: 700 }}>{e.pnl >= 0 ? "+" : ""}₹{e.pnl}</td>
                               <td className="t-cell mono" style={{ color: e.pnl >= 0 ? "#089981" : "#f23645" }}>{((e.pnl / (e.entry * e.qty)) * 100).toFixed(2)}%</td>
                             </tr>
@@ -1938,8 +2023,8 @@ const handleOrder = useCallback(async (order) => {
             <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: "#f1f5f9" }}>Market Heatmap</div>
-                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Nifty 50 stocks by {heatmapBy === "chg" ? "daily change" : "market cap"}</div>
+                  <div style={{ fontWeight: 800, fontSize: 18, color: pal.textHeading }}>Market Heatmap</div>
+                  <div style={{ fontSize: 11, color: pal.textMuted, marginTop: 2 }}>Nifty 50 stocks by {heatmapBy === "chg" ? "daily change" : "market cap"}</div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   {[["chg", "% Change"], ["mktcap", "Mkt Cap"]].map(([v, l]) => (
@@ -1948,10 +2033,10 @@ const handleOrder = useCallback(async (order) => {
                 </div>
               </div>
               {/* Legend */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 10, color: "#6b7280" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 10, color: pal.textMuted }}>
                 <span>Bearish</span>
                 {[-3, -2, -1, 0, 1, 2, 3].map(v => (
-                  <div key={v} style={{ width: 28, height: 12, borderRadius: 2, background: v < 0 ? `rgba(242,54,69,${Math.min(Math.abs(v) / 3, 1) * 0.8 + 0.1})` : v > 0 ? `rgba(8,153,129,${Math.min(v / 3, 1) * 0.8 + 0.1})` : "rgba(255,255,255,0.08)" }} />
+                  <div key={v} style={{ width: 28, height: 12, borderRadius: 2, background: v < 0 ? `rgba(242,54,69,${Math.min(Math.abs(v) / 3, 1) * 0.8 + 0.1})` : v > 0 ? `rgba(8,153,129,${Math.min(v / 3, 1) * 0.8 + 0.1})` : pal.chipBg }} />
                 ))}
                 <span>Bullish</span>
               </div>
@@ -1965,7 +2050,7 @@ const handleOrder = useCallback(async (order) => {
                       style={{ width: size, height: size * 0.65, background: bg, border: `1px solid ${chg > 0 ? "rgba(8,153,129,0.2)" : "rgba(242,54,69,0.2)"}` }}>
                       <div style={{ fontSize: Math.max(9, size / 8), fontWeight: 700, color: "#fff", textAlign: "center" }}>{s.sym}</div>
                       <div style={{ fontSize: Math.max(8, size / 9), fontWeight: 600, color: chg >= 0 ? "#5eead4" : "#fca5a5" }}>{chg >= 0 ? "+" : ""}{chg.toFixed(2)}%</div>
-                      <div style={{ fontSize: Math.max(7, size / 12), color: "rgba(255,255,255,0.4)" }}>{s.sector}</div>
+                      <div style={{ fontSize: Math.max(7, size / 12), color: "rgba(255,255,255,0.6)" }}>{s.sector}</div>
                     </div>
                   );
                 })}
@@ -1976,8 +2061,8 @@ const handleOrder = useCallback(async (order) => {
           {/* ── SCANNER ── */}
           {mainView === "scanner" && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "#0d1020" }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: "#f1f5f9", marginBottom: 12 }}>Market Scanner</div>
+              <div style={{ padding: "14px 20px", borderBottom: `1px solid ${pal.border}`, background: pal.headerBg }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: pal.textHeading, marginBottom: 12 }}>Market Scanner</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {SCANNER_CRITERIA.map(c => (
                     <button key={c} className={`screen-chip ${scanFilter === c ? "screen-chip-on" : ""}`} onClick={() => setScanFilter(c)}>{c}</button>
@@ -1986,19 +2071,19 @@ const handleOrder = useCallback(async (order) => {
               </div>
               <div style={{ flex: 1, overflowY: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr style={{ position: "sticky", top: 0, background: "#0d1020", zIndex: 1 }}>{["Symbol", "Exchange", "Sector", "Price", "Change", "RSI", "Vol Ratio", "Signal", "Action"].map(h => <th key={h} className="t-head">{h}</th>)}</tr></thead>
+                  <thead><tr style={{ position: "sticky", top: 0, background: pal.headerBg, zIndex: 1 }}>{["Symbol", "Exchange", "Sector", "Price", "Change", "RSI", "Vol Ratio", "Signal", "Action"].map(h => <th key={h} className="t-head">{h}</th>)}</tr></thead>
                   <tbody>
                     {scannerResults
                       .filter(s => scanFilter.includes("RSI < 30") ? s.rsi < 35 : scanFilter.includes("RSI > 70") ? s.rsi > 65 : scanFilter.includes("52W High") ? s.chgPct > 1.5 : scanFilter.includes("Volume") ? s.volRatio > 1.5 : scanFilter.includes("Breakout") ? s.chgPct > 2 : s.rsi < 50)
                       .map((s, i) => (
                         <tr key={i} className="t-row scan-row" onClick={() => { const sym = SYMBOLS.find(x => x.sym === s.sym); if (sym) { setActiveSym(sym); setMainView("chart"); } }}>
-                          <td className="t-cell" style={{ fontWeight: 700, color: "#e2e8f0" }}>{s.sym}</td>
-                          <td className="t-cell" style={{ fontSize: 9, color: "#374151" }}>{s.exch}</td>
-                          <td className="t-cell" style={{ fontSize: 9.5, color: "#6b7280" }}>{s.sector}</td>
+                          <td className="t-cell" style={{ fontWeight: 700, color: pal.textPrimary }}>{s.sym}</td>
+                          <td className="t-cell" style={{ fontSize: 9, color: pal.textDim }}>{s.exch}</td>
+                          <td className="t-cell" style={{ fontSize: 9.5, color: pal.textMuted }}>{s.sector}</td>
                           <td className="t-cell mono" style={{ fontWeight: 600 }}>₹{fmt(s.price)}</td>
                           <td className="t-cell"><span className={s.chgPct >= 0 ? "badge-up" : "badge-dn"}>{s.chgPct >= 0 ? "▲" : "▼"} {Math.abs(s.chgPct).toFixed(2)}%</span></td>
-                          <td className="t-cell mono" style={{ color: s.rsi > 70 ? "#f23645" : s.rsi < 30 ? "#089981" : "#94a3b8", fontWeight: 700 }}>{s.rsi}</td>
-                          <td className="t-cell mono" style={{ color: s.volRatio > 1.5 ? "#f59e0b" : "#94a3b8" }}>{s.volRatio.toFixed(1)}x</td>
+                          <td className="t-cell mono" style={{ color: s.rsi > 70 ? "#f23645" : s.rsi < 30 ? "#089981" : pal.textSecondary, fontWeight: 700 }}>{s.rsi}</td>
+                          <td className="t-cell mono" style={{ color: s.volRatio > 1.5 ? "#f59e0b" : pal.textSecondary }}>{s.volRatio.toFixed(1)}x</td>
                           <td className="t-cell"><span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 10, fontWeight: 700, background: s.chgPct > 0 ? "rgba(8,153,129,0.12)" : "rgba(242,54,69,0.12)", color: s.chgPct > 0 ? "#089981" : "#f23645" }}>{s.chgPct > 0 ? "BULLISH" : "BEARISH"}</span></td>
                           <td className="t-cell"><button className="buy-btn" style={{ padding: "2px 8px", fontSize: 9 }} onClick={e => { e.stopPropagation(); setActiveSym(s); setShowOrderDialog({ side: "BUY", price: s.price }); }}>Trade</button></td>
                         </tr>
@@ -2012,7 +2097,7 @@ const handleOrder = useCallback(async (order) => {
           {/* ── PORTFOLIO ── */}
           {mainView === "portfolio" && (
             <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
-              <div style={{ fontWeight: 800, fontSize: 18, color: "#f1f5f9", marginBottom: 6 }}>Portfolio Overview</div>
+              <div style={{ fontWeight: 800, fontSize: 18, color: pal.textHeading, marginBottom: 6 }}>Portfolio Overview</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
                 {[
                   { l: "Total Invested", v: `₹${(positions.reduce((s, p) => s + Math.abs(p.avg * p.qty), 0) / 100000).toFixed(2)}L`, c: "#60a5fa" },
@@ -2020,15 +2105,15 @@ const handleOrder = useCallback(async (order) => {
                   { l: "Day P&L", v: `${totalPnl >= 0 ? "+" : ""}₹${fmt(Math.abs(totalPnl))}`, c: totalPnl >= 0 ? "#089981" : "#f23645" },
                   { l: "Total Returns", v: `${totalPnl >= 0 ? "+" : ""}${((totalPnl / positions.reduce((s, p) => s + Math.abs(p.avg * p.qty), 0.01)) * 100).toFixed(2)}%`, c: totalPnl >= 0 ? "#089981" : "#f23645" },
                 ].map(({ l, v, c }) => (
-                  <div key={l} style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{l}</div>
+                  <div key={l} style={{ background: pal.panelBg, border: `1px solid ${pal.border}`, borderRadius: 10, padding: "14px 16px" }}>
+                    <div style={{ fontSize: 10, color: pal.textMuted, marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{l}</div>
                     <div className="mono" style={{ fontSize: 18, fontWeight: 800, color: c }}>{v}</div>
                   </div>
                 ))}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 16 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#e2e8f0", marginBottom: 12 }}>Holdings</div>
+                <div style={{ background: pal.panelBg, border: `1px solid ${pal.border}`, borderRadius: 10, padding: 16 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: pal.textPrimary, marginBottom: 12 }}>Holdings</div>
                   {positions.map((p, i) => {
                     const lv = prices[p.sym] || { price: p.avg };
                     const pnl = (lv.price - p.avg) * p.qty;
@@ -2038,24 +2123,24 @@ const handleOrder = useCallback(async (order) => {
                     const candles = candleStore[p.sym] || [];
                     const sparkData = candles.slice(-30).map(c => c.close);
                     return (
-                      <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div key={i} style={{ padding: "10px 0", borderBottom: `1px solid ${pal.borderFaint}` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                           <div>
-                            <span style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>{p.sym}</span>
-                            <span style={{ fontSize: 9, color: "#374151", marginLeft: 5 }}>{Math.abs(p.qty)} shares</span>
+                            <span style={{ fontWeight: 700, fontSize: 12, color: pal.textHeading }}>{p.sym}</span>
+                            <span style={{ fontSize: 9, color: pal.textDim, marginLeft: 5 }}>{Math.abs(p.qty)} shares</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                             <Sparkline data={sparkData} color={pnl >= 0 ? "#089981" : "#f23645"} />
                             <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: pnl >= 0 ? "#089981" : "#f23645" }}>{pnl >= 0 ? "+" : ""}₹{fmt(Math.abs(pnl))}</span>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: 12, fontSize: 10, color: "#6b7280", marginBottom: 4 }}>
-                          <span>Avg: <span className="mono" style={{ color: "#94a3b8" }}>₹{fmt(p.avg)}</span></span>
+                        <div style={{ display: "flex", gap: 12, fontSize: 10, color: pal.textMuted, marginBottom: 4 }}>
+                          <span>Avg: <span className="mono" style={{ color: pal.textSecondary }}>₹{fmt(p.avg)}</span></span>
                           <span>LTP: <span className="mono" style={{ color: pnl >= 0 ? "#089981" : "#f23645" }}>₹{fmt(lv.price)}</span></span>
                           <span style={{ color: pct >= 0 ? "#089981" : "#f23645", fontWeight: 600 }}>{pct.toFixed(2)}%</span>
-                          <span style={{ marginLeft: "auto", color: "#374151" }}>{weight.toFixed(1)}% weight</span>
+                          <span style={{ marginLeft: "auto", color: pal.textDim }}>{weight.toFixed(1)}% weight</span>
                         </div>
-                        <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.05)" }}>
+                        <div style={{ height: 4, borderRadius: 2, background: pal.chipBg }}>
                           <div style={{ height: "100%", borderRadius: 2, width: `${Math.min(Math.abs(pct) * 4, 100)}%`, background: pnl >= 0 ? "#089981" : "#f23645", transition: "width 0.5s" }} />
                         </div>
                       </div>
@@ -2063,8 +2148,8 @@ const handleOrder = useCallback(async (order) => {
                   })}
                 </div>
                 <div>
-                  <div style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 16, marginBottom: 14 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "#e2e8f0", marginBottom: 12 }}>Sector Allocation</div>
+                  <div style={{ background: pal.panelBg, border: `1px solid ${pal.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: pal.textPrimary, marginBottom: 12 }}>Sector Allocation</div>
                     {Object.entries(positions.reduce((acc, p) => { const sector = SYMBOLS.find(s => s.sym === p.sym)?.sector || "Other"; acc[sector] = (acc[sector] || 0) + Math.abs(p.avg * p.qty); return acc; }, {})).map(([sector, val], i) => {
                       const total = positions.reduce((s, p) => s + Math.abs(p.avg * p.qty), 0.01);
                       const pct = (val / total) * 100;
@@ -2072,23 +2157,23 @@ const handleOrder = useCallback(async (order) => {
                       return (
                         <div key={sector} style={{ marginBottom: 8 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                            <span style={{ fontSize: 11, color: "#94a3b8" }}>{sector}</span>
-                            <span style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 600 }}>{pct.toFixed(1)}%</span>
+                            <span style={{ fontSize: 11, color: pal.textSecondary }}>{sector}</span>
+                            <span style={{ fontSize: 11, color: pal.textPrimary, fontWeight: 600 }}>{pct.toFixed(1)}%</span>
                           </div>
-                          <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.05)" }}>
+                          <div style={{ height: 6, borderRadius: 3, background: pal.chipBg }}>
                             <div style={{ height: "100%", borderRadius: 3, width: `${pct}%`, background: colors[i % colors.length] }} />
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                  <div style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "#e2e8f0", marginBottom: 12 }}>Quick Stats</div>
+                  <div style={{ background: pal.panelBg, border: `1px solid ${pal.border}`, borderRadius: 10, padding: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: pal.textPrimary, marginBottom: 12 }}>Quick Stats</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       {[["Open Positions", positions.length], ["Open Orders", orders.filter(o => o.status === "OPEN").length], ["Active Alerts", alerts.length], ["Win Rate", "67%"]].map(([l, v]) => (
-                        <div key={l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "10px 12px" }}>
-                          <div style={{ fontSize: 9.5, color: "#6b7280", marginBottom: 2, textTransform: "uppercase", fontWeight: 600 }}>{l}</div>
-                          <div className="mono" style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0" }}>{v}</div>
+                        <div key={l} style={{ background: pal.chipBg, borderRadius: 6, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 9.5, color: pal.textMuted, marginBottom: 2, textTransform: "uppercase", fontWeight: 600 }}>{l}</div>
+                          <div className="mono" style={{ fontSize: 15, fontWeight: 700, color: pal.textPrimary }}>{v}</div>
                         </div>
                       ))}
                     </div>
@@ -2103,45 +2188,45 @@ const handleOrder = useCallback(async (order) => {
             <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: "#f1f5f9" }}>Trade Journal</div>
-                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Record, review and improve your trades</div>
+                  <div style={{ fontWeight: 800, fontSize: 18, color: pal.textHeading }}>Trade Journal</div>
+                  <div style={{ fontSize: 11, color: pal.textMuted, marginTop: 2 }}>Record, review and improve your trades</div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <div style={{ background: "rgba(8,153,129,0.1)", border: "1px solid rgba(8,153,129,0.2)", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-                    <div style={{ fontSize: 9, color: "#6b7280", marginBottom: 2 }}>WIN RATE</div>
+                    <div style={{ fontSize: 9, color: pal.textMuted, marginBottom: 2 }}>WIN RATE</div>
                     <div className="mono" style={{ fontSize: 16, fontWeight: 700, color: "#089981" }}>67%</div>
                   </div>
                   <div style={{ background: "rgba(41,98,255,0.1)", border: "1px solid rgba(41,98,255,0.2)", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-                    <div style={{ fontSize: 9, color: "#6b7280", marginBottom: 2 }}>TOTAL P&L</div>
+                    <div style={{ fontSize: 9, color: pal.textMuted, marginBottom: 2 }}>TOTAL P&L</div>
                     <div className="mono" style={{ fontSize: 16, fontWeight: 700, color: "#7da8ff" }}>+₹{journalEntries.reduce((s, e) => s + e.pnl, 0)}</div>
                   </div>
                   <div style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-                    <div style={{ fontSize: 9, color: "#6b7280", marginBottom: 2 }}>AVG RATING</div>
+                    <div style={{ fontSize: 9, color: pal.textMuted, marginBottom: 2 }}>AVG RATING</div>
                     <div className="mono" style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b" }}>{(journalEntries.reduce((s, e) => s + e.rating, 0) / journalEntries.length).toFixed(1)} ⭐</div>
                   </div>
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[...journalEntries].reverse().map((e, i) => (
-                  <div key={i} style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 16 }}>
+                  <div key={i} style={{ background: pal.panelBg, border: `1px solid ${pal.border}`, borderRadius: 10, padding: 16 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontWeight: 800, fontSize: 14, color: "#f1f5f9" }}>{e.sym}</span>
+                        <span style={{ fontWeight: 800, fontSize: 14, color: pal.textHeading }}>{e.sym}</span>
                         <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700, background: e.side === "BUY" ? "rgba(8,153,129,0.12)" : "rgba(242,54,69,0.12)", color: e.side === "BUY" ? "#089981" : "#f23645" }}>{e.side}</span>
-                        <span style={{ fontSize: 10, color: "#6b7280" }}>{e.date}</span>
-                        <span style={{ fontSize: 10, color: "#6b7280" }}>{e.qty} shares</span>
+                        <span style={{ fontSize: 10, color: pal.textMuted }}>{e.date}</span>
+                        <span style={{ fontSize: 10, color: pal.textMuted }}>{e.qty} shares</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <span className="mono" style={{ fontSize: 15, fontWeight: 700, color: e.pnl >= 0 ? "#089981" : "#f23645" }}>{e.pnl >= 0 ? "+" : ""}₹{e.pnl}</span>
-                        <div style={{ display: "flex", gap: 2 }}>{[1, 2, 3, 4, 5].map(s => <span key={s} style={{ fontSize: 14, color: s <= e.rating ? "#f59e0b" : "rgba(255,255,255,0.1)" }}>★</span>)}</div>
+                        <div style={{ display: "flex", gap: 2 }}>{[1, 2, 3, 4, 5].map(s => <span key={s} style={{ fontSize: 14, color: s <= e.rating ? "#f59e0b" : pal.border }}>★</span>)}</div>
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 16, fontSize: 10, color: "#6b7280", marginBottom: 8 }}>
-                      <span>Entry: <span className="mono" style={{ color: "#94a3b8" }}>₹{e.entry}</span></span>
-                      <span>Exit: <span className="mono" style={{ color: "#94a3b8" }}>₹{e.exit}</span></span>
+                    <div style={{ display: "flex", gap: 16, fontSize: 10, color: pal.textMuted, marginBottom: 8 }}>
+                      <span>Entry: <span className="mono" style={{ color: pal.textSecondary }}>₹{e.entry}</span></span>
+                      <span>Exit: <span className="mono" style={{ color: pal.textSecondary }}>₹{e.exit}</span></span>
                       <span>Return: <span className="mono" style={{ color: e.pnl >= 0 ? "#089981" : "#f23645" }}>{((e.pnl / (e.entry * e.qty)) * 100).toFixed(2)}%</span></span>
                     </div>
-                    <div style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", padding: "8px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 6, borderLeft: `3px solid ${e.pnl >= 0 ? "rgba(8,153,129,0.4)" : "rgba(242,54,69,0.4)"}` }}>"{e.note}"</div>
+                    <div style={{ fontSize: 11, color: pal.textMuted, fontStyle: "italic", padding: "8px 12px", background: pal.chipBg, borderRadius: 6, borderLeft: `3px solid ${e.pnl >= 0 ? "rgba(8,153,129,0.4)" : "rgba(242,54,69,0.4)"}` }}>"{e.note}"</div>
                   </div>
                 ))}
               </div>
@@ -2151,8 +2236,8 @@ const handleOrder = useCallback(async (order) => {
           {/* ── CALENDAR ── */}
           {mainView === "calendar" && (
             <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
-              <div style={{ fontWeight: 800, fontSize: 18, color: "#f1f5f9", marginBottom: 6 }}>Economic Calendar</div>
-              <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 16 }}>Upcoming events that may impact markets</div>
+              <div style={{ fontWeight: 800, fontSize: 18, color: pal.textHeading, marginBottom: 6 }}>Economic Calendar</div>
+              <div style={{ fontSize: 11, color: pal.textMuted, marginBottom: 16 }}>Upcoming events that may impact markets</div>
               {[
                 { date: "Today", time: "10:00", event: "RBI Monetary Policy Meeting", impact: "HIGH", country: "🇮🇳", prev: "-", exp: "6.5%", act: "6.5%" },
                 { date: "Today", time: "14:30", event: "US CPI Data (YoY)", impact: "HIGH", country: "🇺🇸", prev: "3.2%", exp: "3.1%", act: "-" },
@@ -2163,20 +2248,20 @@ const handleOrder = useCallback(async (order) => {
                 { date: "Jun 14", time: "09:15", event: "India WPI Inflation", impact: "LOW", country: "🇮🇳", prev: "1.1%", exp: "1.3%", act: "-" },
                 { date: "Jun 17", time: "15:00", event: "India Advance Estimates GDP", impact: "HIGH", country: "🇮🇳", prev: "8.4%", exp: "7.8%", act: "-" },
               ].map((e, i) => (
-                <div key={i} style={{ background: "#131722", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+                <div key={i} style={{ background: pal.panelBg, border: `1px solid ${pal.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 70, flexShrink: 0 }}>
-                    <div style={{ fontSize: 9.5, color: "#374151", fontWeight: 600 }}>{e.date}</div>
-                    <div style={{ fontSize: 11, color: "#6b7280", fontFamily: "'JetBrains Mono',monospace" }}>{e.time}</div>
+                    <div style={{ fontSize: 9.5, color: pal.textDim, fontWeight: 600 }}>{e.date}</div>
+                    <div style={{ fontSize: 11, color: pal.textMuted, fontFamily: "'JetBrains Mono',monospace" }}>{e.time}</div>
                   </div>
                   <div style={{ fontSize: 12, flexShrink: 0 }}>{e.country}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{e.event}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: pal.textPrimary }}>{e.event}</div>
                   </div>
                   <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 9.5, fontWeight: 700, flexShrink: 0, background: e.impact === "HIGH" ? "rgba(242,54,69,0.12)" : e.impact === "MEDIUM" ? "rgba(245,158,11,0.12)" : "rgba(8,153,129,0.12)", color: e.impact === "HIGH" ? "#f23645" : e.impact === "MEDIUM" ? "#f59e0b" : "#089981" }}>{e.impact}</span>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, flexShrink: 0, textAlign: "center" }}>
-                    {[["Prev", e.prev, "#6b7280"], ["Exp", e.exp, "#94a3b8"], ["Act", e.act, e.act !== "-" ? "#f59e0b" : "#374151"]].map(([l, v, c]) => (
+                    {[["Prev", e.prev, pal.textMuted], ["Exp", e.exp, pal.textSecondary], ["Act", e.act, e.act !== "-" ? "#f59e0b" : pal.textDim]].map(([l, v, c]) => (
                       <div key={l}>
-                        <div style={{ fontSize: 8.5, color: "#374151", textTransform: "uppercase", fontWeight: 600, marginBottom: 2 }}>{l}</div>
+                        <div style={{ fontSize: 8.5, color: pal.textDim, textTransform: "uppercase", fontWeight: 600, marginBottom: 2 }}>{l}</div>
                         <div className="mono" style={{ fontSize: 11, fontWeight: 700, color: c }}>{v}</div>
                       </div>
                     ))}
@@ -2188,7 +2273,7 @@ const handleOrder = useCallback(async (order) => {
         </div>
 
         {/* ── RIGHT ICON SIDEBAR ── */}
-        <div style={{ width: 64, background: "#0d1020", borderLeft: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0", flexShrink: 0, zIndex: 5 }}>
+        <div style={{ width: 64, background: pal.leftBarBg, borderLeft: `1px solid ${pal.border}`, display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0", flexShrink: 0, zIndex: 5 }}>
           {[
             { id: "watchlist", icon: "☰", tip: "Watch" },
             { id: "positions", icon: "◐", tip: "Posn" },
@@ -2199,23 +2284,23 @@ const handleOrder = useCallback(async (order) => {
           ].map(p => (
             <button key={p.id} title={p.tip} className={`rp-tab ${rightPanel === p.id ? "rp-tab-active" : ""}`} onClick={() => setRightPanel(v => v === p.id ? null : p.id)}>
               <span style={{ fontSize: 20 }}>{p.icon}</span>
-              <span style={{ fontSize: 9, color: rightPanel === p.id ? "#7da8ff" : "#94a3b8", letterSpacing: "0.04em", fontWeight: 600 }}>{p.tip}</span>
+              <span style={{ fontSize: 9, color: rightPanel === p.id ? "#7da8ff" : pal.textSecondary, letterSpacing: "0.04em", fontWeight: 600 }}>{p.tip}</span>
             </button>
           ))}
         </div>
 
         {/* ── RIGHT PANEL ── */}
         {rightPanel && (
-          <div style={{ width: 256, background: "#0f1220", borderLeft: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", flexShrink: 0, overflow: "hidden" }}>
+          <div style={{ width: 256, background: pal.panelBg2, borderLeft: `1px solid ${pal.borderFaint}`, display: "flex", flexDirection: "column", flexShrink: 0, overflow: "hidden" }}>
 
             {/* WATCHLIST */}
             {rightPanel === "watchlist" && <>
-              <div style={{ padding: "8px 10px 6px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "5px 8px", display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ color: "#374151", fontSize: 13 }}>⌕</span>
+              <div style={{ padding: "8px 10px 6px", borderBottom: `1px solid ${pal.borderFaint}` }}>
+                <div style={{ background: pal.inputBg, border: `1px solid ${pal.borderStrong}`, borderRadius: 6, padding: "5px 8px", display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ color: pal.textDim, fontSize: 13 }}>⌕</span>
                   <input value={symSearch} onChange={e => setSymSearch(e.target.value)} placeholder="Search symbol..."
-                    style={{ flex: 1, fontSize: 11, color: "#d1d5db", background: "transparent" }} />
-                  {symSearch && <button onClick={() => setSymSearch("")} style={{ color: "#374151", fontSize: 12 }}>✕</button>}
+                    style={{ flex: 1, fontSize: 11, color: pal.textPrimary, background: "transparent" }} />
+                  {symSearch && <button onClick={() => setSymSearch("")} style={{ color: pal.textDim, fontSize: 12 }}>✕</button>}
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: "auto" }}>
@@ -2226,7 +2311,7 @@ const handleOrder = useCallback(async (order) => {
                   if (!sectorSyms.length) return null;
                   return (
                     <div key={sector}>
-                      {!symSearch && <div style={{ fontSize: 8.5, fontWeight: 700, color: "#374151", textTransform: "uppercase", padding: "5px 10px 2px", letterSpacing: "0.08em" }}>{sector}</div>}
+                      {!symSearch && <div style={{ fontSize: 8.5, fontWeight: 700, color: pal.textDim, textTransform: "uppercase", padding: "5px 10px 2px", letterSpacing: "0.08em" }}>{sector}</div>}
                       {sectorSyms.map(s => {
                         const lv = prices[s.sym] || { price: s.base, chgPct: 0 };
                         const up = lv.chgPct >= 0;
@@ -2234,11 +2319,11 @@ const handleOrder = useCallback(async (order) => {
                         const candles = candleStore[s.sym] || [];
                         const spark = candles.slice(-20).map(c => c.close);
                         return (
-                          <div key={s.sym} className={`sym-row ${isActive ? "sym-row-active" : ""}`} onClick={() => { setActiveSym(s); if (mainView !== "chart") setMainView("chart"); }} style={{ padding: "6px 10px", borderBottom: "1px solid rgba(255,255,255,0.02)", borderLeft: isActive ? "2px solid #2962ff" : "2px solid transparent" }}>
+                          <div key={s.sym} className={`sym-row ${isActive ? "sym-row-active" : ""}`} onClick={() => { setActiveSym(s); if (mainView !== "chart") setMainView("chart"); }} style={{ padding: "6px 10px", borderBottom: `1px solid ${pal.borderFaint}`, borderLeft: isActive ? "2px solid #2962ff" : "2px solid transparent" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <div>
-                                <span style={{ fontWeight: 700, fontSize: 11.5, color: isActive ? "#7da8ff" : "#e2e8f0" }}>{s.sym}</span>
-                                <span style={{ fontSize: 8, color: "#374151", marginLeft: 4 }}>{s.exch}</span>
+                                <span style={{ fontWeight: 700, fontSize: 11.5, color: isActive ? "#7da8ff" : pal.textPrimary }}>{s.sym}</span>
+                                <span style={{ fontSize: 8, color: pal.textDim, marginLeft: 4 }}>{s.exch}</span>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <Sparkline data={spark} color={up ? "#089981" : "#f23645"} width={36} height={14} />
@@ -2246,7 +2331,7 @@ const handleOrder = useCallback(async (order) => {
                               </div>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                              <span style={{ fontSize: 9, color: "#2a3345" }}>{s.name.slice(0, 18)}</span>
+                              <span style={{ fontSize: 9, color: pal.textGhost }}>{s.name.slice(0, 18)}</span>
                               <span className={up ? "badge-up" : "badge-dn"}>{up ? "▲" : "▼"} {Math.abs(lv.chgPct).toFixed(2)}%</span>
                             </div>
                           </div>
@@ -2260,8 +2345,8 @@ const handleOrder = useCallback(async (order) => {
 
             {/* POSITIONS */}
             {rightPanel === "positions" && <>
-              <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>Positions</span>
+              <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${pal.borderFaint}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, fontSize: 12, color: pal.textHeading }}>Positions</span>
                 <span className="mono" style={{ fontSize: 11, color: totalPnl >= 0 ? "#089981" : "#f23645", fontWeight: 700 }}>{totalPnl >= 0 ? "+" : ""}₹{fmt(Math.abs(totalPnl))}</span>
               </div>
               <div style={{ flex: 1, overflowY: "auto" }}>
@@ -2270,30 +2355,30 @@ const handleOrder = useCallback(async (order) => {
                   const pnl = (lv.price - p.avg) * p.qty;
                   const pct = (pnl / Math.abs(p.avg * p.qty)) * 100;
                   return (
-                    <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div key={i} style={{ padding: "10px 12px", borderBottom: `1px solid ${pal.borderFaint}` }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <div>
-                          <span style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>{p.sym}</span>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: pal.textHeading }}>{p.sym}</span>
                           <span style={{ marginLeft: 6, padding: "1px 5px", borderRadius: 3, fontSize: 8.5, fontWeight: 700, background: p.side === "long" ? "rgba(8,153,129,0.15)" : "rgba(242,54,69,0.15)", color: p.side === "long" ? "#089981" : "#f23645" }}>{p.side.toUpperCase()}</span>
                           <span style={{ marginLeft: 4, padding: "1px 5px", borderRadius: 3, fontSize: 8.5, fontWeight: 700, background: p.product === "MIS" ? "rgba(245,158,11,0.15)" : "rgba(96,165,250,0.15)", color: p.product === "MIS" ? "#f59e0b" : "#60a5fa" }}>{p.product || "MIS"}</span>
                         </div>
                         <span className="mono" style={{ fontSize: 11, color: pnl >= 0 ? "#089981" : "#f23645", fontWeight: 700 }}>{pnl >= 0 ? "+" : ""}₹{fmt(Math.abs(pnl))}</span>
                       </div>
-                      <div style={{ fontSize: 10, color: "#6b7280", display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span>Qty:<span className="mono" style={{ color: "#94a3b8", marginLeft: 3 }}>{Math.abs(p.qty)}</span></span>
-                        <span>Avg:<span className="mono" style={{ color: "#94a3b8", marginLeft: 3 }}>₹{fmt(p.avg)}</span></span>
+                      <div style={{ fontSize: 10, color: pal.textMuted, display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span>Qty:<span className="mono" style={{ color: pal.textSecondary, marginLeft: 3 }}>{Math.abs(p.qty)}</span></span>
+                        <span>Avg:<span className="mono" style={{ color: pal.textSecondary, marginLeft: 3 }}>₹{fmt(p.avg)}</span></span>
                         <span>LTP:<span className="mono" style={{ color: pnl >= 0 ? "#089981" : "#f23645", marginLeft: 3 }}>₹{fmt(lv.price)}</span></span>
                       </div>
                       {p.product === "MIS" && p.margin != null && (
-                        <div style={{ fontSize: 9, color: "#4b5563", marginBottom: 6 }}>Margin used: <span className="mono" style={{ color: "#94a3b8" }}>₹{fmt(p.margin)}</span></div>
+                        <div style={{ fontSize: 9, color: pal.textFaint, marginBottom: 6 }}>Margin used: <span className="mono" style={{ color: pal.textSecondary }}>₹{fmt(p.margin)}</span></div>
                       )}
                       <div style={{ fontSize: 9.5, color: pct >= 0 ? "#089981" : "#f23645", fontWeight: 600, marginBottom: 5 }}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</div>
-                      <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.06)", marginBottom: 6 }}>
+                      <div style={{ height: 3, borderRadius: 2, background: pal.chipBg, marginBottom: 6 }}>
                         <div style={{ height: "100%", borderRadius: 2, width: `${Math.min(Math.abs(pct) * 5, 100)}%`, background: pnl >= 0 ? "#089981" : "#f23645" }} />
                       </div>
                       <div style={{ display: "flex", gap: 4 }}>
                         <button className="sell-btn" style={{ flex: 1, padding: "3px 0", fontSize: 10, borderRadius: 4 }} onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setShowOrderDialog({ sym: p.sym, name: p.name, exch: p.exch, product: p.product, qty: Math.abs(p.qty), side: p.side === "long" ? "SELL" : "BUY", price: lv.price }); }}>Exit</button>
-                        <button style={{ flex: 1, padding: "3px 0", fontSize: 10, borderRadius: 4, border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280", fontWeight: 600 }} onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setMainView("chart"); }}>Chart</button>
+                        <button style={{ flex: 1, padding: "3px 0", fontSize: 10, borderRadius: 4, border: `1px solid ${pal.border}`, color: pal.textMuted, fontWeight: 600 }} onClick={() => { setActiveSym(SYMBOLS.find(s => s.sym === p.sym) || activeSym); setMainView("chart"); }}>Chart</button>
                         <button style={{ flex: 0, padding: "3px 8px", fontSize: 10, borderRadius: 4, border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b" }} onClick={() => setShowAlertDialog(true)}>⊕</button>
                       </div>
                     </div>
@@ -2304,25 +2389,25 @@ const handleOrder = useCallback(async (order) => {
 
             {/* ORDERS */}
             {rightPanel === "orders" && <>
-              <div style={{ padding: "10px 12px 6px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>Orders</span>
-                <span style={{ fontSize: 9, color: "#6b7280" }}>{orders.filter(o => o.status === "OPEN").length} open · {orders.filter(o => o.status === "COMPLETE").length} done</span>
+              <div style={{ padding: "10px 12px 6px", borderBottom: `1px solid ${pal.borderFaint}`, display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontWeight: 700, fontSize: 12, color: pal.textHeading }}>Orders</span>
+                <span style={{ fontSize: 9, color: pal.textMuted }}>{orders.filter(o => o.status === "OPEN").length} open · {orders.filter(o => o.status === "COMPLETE").length} done</span>
               </div>
               <div style={{ flex: 1, overflowY: "auto" }}>
                 {orders.map((o, i) => (
-                  <div key={i} style={{ padding: "9px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                  <div key={i} style={{ padding: "9px 12px", borderBottom: `1px solid ${pal.borderFaint}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                      <span style={{ fontWeight: 700, fontSize: 11.5, color: "#f1f5f9" }}>{o.sym}</span>
-                      <span style={{ padding: "1px 6px", borderRadius: 3, fontSize: 8.5, fontWeight: 700, background: o.status === "OPEN" ? "rgba(245,158,11,0.12)" : o.status === "COMPLETE" ? "rgba(8,153,129,0.12)" : "rgba(100,116,139,0.12)", color: o.status === "OPEN" ? "#f59e0b" : o.status === "COMPLETE" ? "#089981" : "#6b7280" }}>{o.status}</span>
+                      <span style={{ fontWeight: 700, fontSize: 11.5, color: pal.textHeading }}>{o.sym}</span>
+                      <span style={{ padding: "1px 6px", borderRadius: 3, fontSize: 8.5, fontWeight: 700, background: o.status === "OPEN" ? "rgba(245,158,11,0.12)" : o.status === "COMPLETE" ? "rgba(8,153,129,0.12)" : "rgba(100,116,139,0.12)", color: o.status === "OPEN" ? "#f59e0b" : o.status === "COMPLETE" ? "#089981" : pal.textMuted }}>{o.status}</span>
                     </div>
-                    <div style={{ fontSize: 10, color: "#6b7280", display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+                    <div style={{ fontSize: 10, color: pal.textMuted, display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
                       <span style={{ padding: "1px 6px", borderRadius: 3, fontWeight: 700, fontSize: 9.5, background: o.side === "BUY" ? "rgba(8,153,129,0.12)" : "rgba(242,54,69,0.12)", color: o.side === "BUY" ? "#089981" : "#f23645" }}>{o.side}</span>
                       <span>{o.type}</span>
-                      <span className="mono" style={{ color: "#94a3b8" }}>{o.qty} qty</span>
-                      {o.price > 0 && <span className="mono" style={{ color: "#94a3b8" }}>@ ₹{fmt(o.price)}</span>}
-                      <span style={{ color: "#374151", marginLeft: "auto" }}>{o.time}</span>
+                      <span className="mono" style={{ color: pal.textSecondary }}>{o.qty} qty</span>
+                      {o.price > 0 && <span className="mono" style={{ color: pal.textSecondary }}>@ ₹{fmt(o.price)}</span>}
+                      <span style={{ color: pal.textDim, marginLeft: "auto" }}>{o.time}</span>
                     </div>
-                    {o.status === "OPEN" && <button onClick={() => handleCancelOrder(o)} style={{ marginTop: 2, padding: "2px 10px", fontSize: 9, borderRadius: 3, border: "1px solid rgba(242,54,69,0.25)", color: "rgba(242,54,69,0.7)", fontWeight: 600 }}>Cancel</button>}
+                    {o.status === "OPEN" && <button onClick={() => handleCancelOrder(o)} style={{ marginTop: 2, padding: "2px 10px", fontSize: 9, borderRadius: 3, border: "1px solid rgba(242,54,69,0.25)", color: "rgba(242,54,69,0.8)", fontWeight: 600 }}>Cancel</button>}
                   </div>
                 ))}
               </div>
@@ -2337,9 +2422,9 @@ const handleOrder = useCallback(async (order) => {
               const totBid = bids.reduce((s, x) => s + x.qty, 0);
               const totAsk = asks.reduce((s, x) => s + x.qty, 0);
               return <>
-                <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${pal.borderFaint}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                    <span style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>{activeSym.sym}</span>
+                    <span style={{ fontWeight: 700, fontSize: 12, color: pal.textHeading }}>{activeSym.sym}</span>
                     <span className={isUp ? "badge-up" : "badge-dn"}>{isUp ? "▲" : "▼"} {Math.abs(activeChgPct).toFixed(2)}%</span>
                   </div>
                   <div className="mono" style={{ fontSize: 19, fontWeight: 800, color: isUp ? "#089981" : "#f23645" }}>{fmt(activePrice)}</div>
@@ -2351,8 +2436,8 @@ const handleOrder = useCallback(async (order) => {
                     <span style={{ color: "#f23645", fontWeight: 600 }}>Sell {((totAsk / (totBid + totAsk)) * 100).toFixed(0)}%</span>
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "3px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  {["Buy Qty", "Price", "Sell Qty"].map((h, i) => <span key={h} style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: "0.08em", color: "#374151", textTransform: "uppercase", textAlign: i === 0 ? "left" : i === 1 ? "center" : "right" }}>{h}</span>)}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "3px 8px", borderBottom: `1px solid ${pal.borderFaint}` }}>
+                  {["Buy Qty", "Price", "Sell Qty"].map((h, i) => <span key={h} style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: "0.08em", color: pal.textDim, textTransform: "uppercase", textAlign: i === 0 ? "left" : i === 1 ? "center" : "right" }}>{h}</span>)}
                 </div>
                 {[...Array(7)].map((_, i) => {
                   const bid = bids[6 - i], ask = asks[i];
@@ -2362,7 +2447,7 @@ const handleOrder = useCallback(async (order) => {
                       <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: `${(ask.qty / maxQ) * 45}%`, background: "rgba(242,54,69,0.1)" }} />
                       <div style={{ position: "relative" }}>
                         <div className="mono" style={{ fontSize: 10.5, color: "#089981", fontWeight: 600 }}>{bid.qty}</div>
-                        <div style={{ fontSize: 7.5, color: "#374151" }}>{bid.orders} orders</div>
+                        <div style={{ fontSize: 7.5, color: pal.textDim }}>{bid.orders} orders</div>
                       </div>
                       <div style={{ textAlign: "center", position: "relative" }}>
                         <div className="mono" style={{ fontSize: 10, color: "#089981" }}>{fmt(bid.price)}</div>
@@ -2370,17 +2455,17 @@ const handleOrder = useCallback(async (order) => {
                       </div>
                       <div style={{ textAlign: "right", position: "relative" }}>
                         <div className="mono" style={{ fontSize: 10.5, color: "#f23645", fontWeight: 600 }}>{ask.qty}</div>
-                        <div style={{ fontSize: 7.5, color: "#374151", textAlign: "right" }}>{ask.orders} orders</div>
+                        <div style={{ fontSize: 7.5, color: pal.textDim, textAlign: "right" }}>{ask.orders} orders</div>
                       </div>
                     </div>
                   );
                 })}
-                <div style={{ padding: "8px 12px", borderTop: "1px solid rgba(255,255,255,0.04)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 10 }}>
-                  {[["Total Buy", totBid, "#089981"], ["Total Sell", totAsk, "#f23645"], ["Upper Ckt", fmt(p * 1.2), "#6b7280"], ["Lower Ckt", fmt(p * 0.8), "#6b7280"], ["52W High", fmt(p * 1.35), "#089981"], ["52W Low", fmt(p * 0.65), "#f23645"]].map(([l, v, c]) => (
-                    <div key={l}><div style={{ color: "#374151", fontSize: 8, textTransform: "uppercase", marginBottom: 1, fontWeight: 600 }}>{l}</div><div className="mono" style={{ color: c, fontWeight: 700 }}>{v}</div></div>
+                <div style={{ padding: "8px 12px", borderTop: `1px solid ${pal.borderFaint}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 10 }}>
+                  {[["Total Buy", totBid, "#089981"], ["Total Sell", totAsk, "#f23645"], ["Upper Ckt", fmt(p * 1.2), pal.textMuted], ["Lower Ckt", fmt(p * 0.8), pal.textMuted], ["52W High", fmt(p * 1.35), "#089981"], ["52W Low", fmt(p * 0.65), "#f23645"]].map(([l, v, c]) => (
+                    <div key={l}><div style={{ color: pal.textDim, fontSize: 8, textTransform: "uppercase", marginBottom: 1, fontWeight: 600 }}>{l}</div><div className="mono" style={{ color: c, fontWeight: 700 }}>{v}</div></div>
                   ))}
                 </div>
-                <div style={{ padding: "8px 12px", borderTop: "1px solid rgba(255,255,255,0.04)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                <div style={{ padding: "8px 12px", borderTop: `1px solid ${pal.borderFaint}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                   <button className="buy-btn" style={{ padding: "9px 0", borderRadius: 6, fontSize: 12 }} onClick={() => setShowOrderDialog({ side: "BUY", price: activePrice })}>BUY</button>
                   <button className="sell-btn" style={{ padding: "9px 0", borderRadius: 6, fontSize: 12 }} onClick={() => setShowOrderDialog({ side: "SELL", price: activePrice })}>SELL</button>
                 </div>
@@ -2389,20 +2474,20 @@ const handleOrder = useCallback(async (order) => {
 
             {/* OPTION CHAIN */}
             {rightPanel === "optionchain" && <>
-              <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <div style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9", marginBottom: 6 }}>Option Chain · {activeSym.sym}</div>
+              <div style={{ padding: "8px 10px", borderBottom: `1px solid ${pal.borderFaint}` }}>
+                <div style={{ fontWeight: 700, fontSize: 12, color: pal.textHeading, marginBottom: 6 }}>Option Chain · {activeSym.sym}</div>
                 <div style={{ display: "flex", gap: 4, marginBottom: 5 }}>
                   {["Weekly", "Monthly", "Quarterly"].map((e, i) => (
-                    <button key={e} style={{ padding: "2px 8px", borderRadius: 3, fontSize: 9.5, fontWeight: 600, border: `1px solid rgba(255,255,255,${i === 0 ? 0.14 : 0.06})`, background: i === 0 ? "rgba(255,255,255,0.06)" : "transparent", color: i === 0 ? "#e2e8f0" : "#6b7280" }}>{e}</button>
+                    <button key={e} style={{ padding: "2px 8px", borderRadius: 3, fontSize: 9.5, fontWeight: 600, border: `1px solid ${i === 0 ? pal.borderStrong : pal.borderFaint}`, background: i === 0 ? pal.chipBg : "transparent", color: i === 0 ? pal.textPrimary : pal.textMuted }}>{e}</button>
                   ))}
                 </div>
-                <div style={{ display: "flex", gap: 6, fontSize: 10, color: "#6b7280" }}>
+                <div style={{ display: "flex", gap: 6, fontSize: 10, color: pal.textMuted }}>
                   <span>PCR: <span className="mono" style={{ color: "#f59e0b", fontWeight: 600 }}>0.87</span></span>
-                  <span>Max Pain: <span className="mono" style={{ color: "#94a3b8", fontWeight: 600 }}>{fmt(Math.round(activePrice / 100) * 100)}</span></span>
+                  <span>Max Pain: <span className="mono" style={{ color: pal.textSecondary, fontWeight: 600 }}>{fmt(Math.round(activePrice / 100) * 100)}</span></span>
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 56px 1fr", padding: "3px 6px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                {["CALLS", "Strike", "PUTS"].map((h, i) => <span key={h} style={{ fontSize: 7.5, fontWeight: 700, color: i === 0 ? "#089981" : i === 2 ? "#f23645" : "#6b7280", textAlign: i === 0 ? "left" : i === 1 ? "center" : "right", letterSpacing: "0.08em" }}>{h}</span>)}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 56px 1fr", padding: "3px 6px", borderBottom: `1px solid ${pal.border}` }}>
+                {["CALLS", "Strike", "PUTS"].map((h, i) => <span key={h} style={{ fontSize: 7.5, fontWeight: 700, color: i === 0 ? "#089981" : i === 2 ? "#f23645" : pal.textMuted, textAlign: i === 0 ? "left" : i === 1 ? "center" : "right", letterSpacing: "0.08em" }}>{h}</span>)}
               </div>
               <div style={{ flex: 1, overflowY: "auto" }}>
                 {[...Array(14)].map((_, i) => {
@@ -2416,18 +2501,18 @@ const handleOrder = useCallback(async (order) => {
                   const callOI = Math.floor(Math.random() * 9000 + 100);
                   const putOI = Math.floor(Math.random() * 9000 + 100);
                   return (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 56px 1fr", padding: "3px 6px", borderBottom: "1px solid rgba(255,255,255,0.025)", background: isATM ? "rgba(41,98,255,0.07)" : "transparent" }}>
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 56px 1fr", padding: "3px 6px", borderBottom: `1px solid ${pal.borderFaint}`, background: isATM ? "rgba(41,98,255,0.07)" : "transparent" }}>
                       <div>
                         <div className="mono" style={{ fontSize: 10.5, color: "#089981", fontWeight: 600 }}>₹{callPr}</div>
-                        <div style={{ fontSize: 7, color: "#374151" }}>{(callOI / 1000).toFixed(1)}K IV:{iv.toFixed(0)}%</div>
+                        <div style={{ fontSize: 7, color: pal.textDim }}>{(callOI / 1000).toFixed(1)}K IV:{iv.toFixed(0)}%</div>
                       </div>
                       <div style={{ textAlign: "center" }}>
-                        <div className="mono" style={{ fontSize: 10, fontWeight: 800, color: isATM ? "#60a5fa" : "#6b7280" }}>{strike.toLocaleString()}</div>
-                        {isATM && <div style={{ fontSize: 7, color: "#374151" }}>ATM</div>}
+                        <div className="mono" style={{ fontSize: 10, fontWeight: 800, color: isATM ? "#60a5fa" : pal.textMuted }}>{strike.toLocaleString()}</div>
+                        {isATM && <div style={{ fontSize: 7, color: pal.textDim }}>ATM</div>}
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div className="mono" style={{ fontSize: 10.5, color: "#f23645", fontWeight: 600 }}>₹{putPr}</div>
-                        <div style={{ fontSize: 7, color: "#374151", textAlign: "right" }}>{(putOI / 1000).toFixed(1)}K IV:{(iv + 2).toFixed(0)}%</div>
+                        <div style={{ fontSize: 7, color: pal.textDim, textAlign: "right" }}>{(putOI / 1000).toFixed(1)}K IV:{(iv + 2).toFixed(0)}%</div>
                       </div>
                     </div>
                   );
@@ -2437,30 +2522,30 @@ const handleOrder = useCallback(async (order) => {
 
             {/* SYMBOL INFO */}
             {rightPanel === "info" && <>
-              <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <div style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>{activeSym.sym} · Info</div>
-                <div style={{ fontSize: 9.5, color: "#6b7280", marginTop: 2 }}>{activeSym.name}</div>
+              <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${pal.borderFaint}` }}>
+                <div style={{ fontWeight: 700, fontSize: 12, color: pal.textHeading }}>{activeSym.sym} · Info</div>
+                <div style={{ fontSize: 9.5, color: pal.textMuted, marginTop: 2 }}>{activeSym.name}</div>
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
                   {[["Open", fmt(activePrice * 0.998)], ["High", fmt(activePrice * 1.018)], ["Low", fmt(activePrice * 0.982)], ["Close", fmt(activePrice)], ["Volume", fmtVol(Math.random() * 5e6 + 1e6)], ["Avg Vol", fmtVol(Math.random() * 4e6 + 1e6)], ["52W High", fmt(activePrice * 1.35)], ["52W Low", fmt(activePrice * 0.65)]].map(([l, v]) => (
-                    <div key={l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 5, padding: "7px 8px" }}>
-                      <div style={{ fontSize: 8.5, color: "#374151", textTransform: "uppercase", fontWeight: 600, marginBottom: 2 }}>{l}</div>
-                      <div className="mono" style={{ fontSize: 11.5, fontWeight: 600, color: "#e2e8f0" }}>{v}</div>
+                    <div key={l} style={{ background: pal.chipBg, borderRadius: 5, padding: "7px 8px" }}>
+                      <div style={{ fontSize: 8.5, color: pal.textDim, textTransform: "uppercase", fontWeight: 600, marginBottom: 2 }}>{l}</div>
+                      <div className="mono" style={{ fontSize: 11.5, fontWeight: 600, color: pal.textPrimary }}>{v}</div>
                     </div>
                   ))}
                 </div>
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 9, color: "#374151", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Fundamentals</div>
+                  <div style={{ fontSize: 9, color: pal.textDim, fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Fundamentals</div>
                   {[["P/E Ratio", "22.4x"], ["Market Cap", `₹${(Math.random() * 200000 + 50000).toFixed(0)}Cr`], ["EPS", "₹124.50"], ["Dividend", "₹8.00 (1.2%)"], ["Book Value", "₹980"], ["ROE", "18.4%"]].map(([l, v]) => (
-                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                      <span style={{ fontSize: 10.5, color: "#6b7280" }}>{l}</span>
-                      <span className="mono" style={{ fontSize: 10.5, color: "#e2e8f0", fontWeight: 600 }}>{v}</span>
+                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${pal.borderFaint}` }}>
+                      <span style={{ fontSize: 10.5, color: pal.textMuted }}>{l}</span>
+                      <span className="mono" style={{ fontSize: 10.5, color: pal.textPrimary, fontWeight: 600 }}>{v}</span>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, color: "#374151", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Analyst Ratings</div>
+                  <div style={{ fontSize: 9, color: pal.textDim, fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Analyst Ratings</div>
                   <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
                     {[["BUY", "12", "#089981"], ["HOLD", "5", "#f59e0b"], ["SELL", "2", "#f23645"]].map(([l, n, c]) => (
                       <div key={l} style={{ flex: 1, textAlign: "center", padding: "6px 0", borderRadius: 5, background: `rgba(${c === "#089981" ? "8,153,129" : c === "#f59e0b" ? "245,158,11" : "242,54,69"},0.1)`, border: `1px solid ${c}30` }}>
@@ -2469,7 +2554,7 @@ const handleOrder = useCallback(async (order) => {
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: "flex", gap: 3, fontSize: 10, color: "#6b7280" }}>
+                  <div style={{ display: "flex", gap: 3, fontSize: 10, color: pal.textMuted }}>
                     <span>Target: </span>
                     <span className="mono" style={{ color: "#089981", fontWeight: 700 }}>₹{fmt(activePrice * 1.22)}</span>
                     <span style={{ marginLeft: 4 }}>({(22).toFixed(1)}% upside)</span>
@@ -2482,26 +2567,26 @@ const handleOrder = useCallback(async (order) => {
 
         {/* ── AI PANEL ── */}
         {showAI && (
-          <div className="fade-up" style={{ width: 330, background: "#0a0e1e", borderLeft: "1px solid rgba(41,98,255,0.2)", display: "flex", flexDirection: "column", flexShrink: 0, overflow: "hidden" }}>
+          <div className="fade-up" style={{ width: 330, background: pal.aiPanelBg, borderLeft: "1px solid rgba(41,98,255,0.2)", display: "flex", flexDirection: "column", flexShrink: 0, overflow: "hidden" }}>
             <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(41,98,255,0.15)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(41,98,255,0.05)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#1a3aff,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, boxShadow: "0 0 16px rgba(41,98,255,0.5)" }}>✦</div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 12, color: "#f1f5f9" }}>TradEx AI</div>
+                  <div style={{ fontWeight: 800, fontSize: 12, color: pal.textHeading }}>TradEx AI</div>
                   <div style={{ fontSize: 8, color: "#60a5fa" }}>Powered by Claude · Real-time context</div>
                 </div>
               </div>
-              <button onClick={() => setShowAI(false)} style={{ color: "#4b5563", fontSize: 16, padding: "2px 6px" }}>✕</button>
+              <button onClick={() => setShowAI(false)} style={{ color: pal.textFaint, fontSize: 16, padding: "2px 6px" }}>✕</button>
             </div>
             {/* Context bar */}
-            <div style={{ padding: "6px 10px", background: "rgba(41,98,255,0.04)", borderBottom: "1px solid rgba(41,98,255,0.1)", fontSize: 9, color: "#374151", display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ padding: "6px 10px", background: "rgba(41,98,255,0.04)", borderBottom: "1px solid rgba(41,98,255,0.1)", fontSize: 9, color: pal.textDim, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <span>{activeSym.sym}</span>
               <span style={{ color: isUp ? "#089981" : "#f23645" }}>{fmt(activePrice)}</span>
               <span>RSI≈{(Math.random() * 30 + 35).toFixed(0)}</span>
               <span style={{ color: isUp ? "#089981" : "#f23645" }}>{isUp ? "▲" : "▼"}{Math.abs(activeChgPct).toFixed(2)}%</span>
             </div>
             {/* Quick prompts */}
-            <div style={{ padding: "6px 10px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <div style={{ padding: "6px 10px", borderBottom: `1px solid ${pal.borderFaint}`, display: "flex", gap: 4, flexWrap: "wrap" }}>
               {[`Analyse ${activeSym.sym}`, `News & sentiment`, `Best entry signal`, `Key support levels`, `Explain RSI`, `Market outlook`].map(q => (
                 <button key={q} onClick={() => { setAiInput(q); setTimeout(() => document.getElementById("ai-send")?.click(), 50); }}
                   style={{ padding: "3px 8px", borderRadius: 20, fontSize: 8.5, border: "1px solid rgba(41,98,255,0.25)", color: "#60a5fa", background: "rgba(41,98,255,0.07)", fontWeight: 500, cursor: "pointer" }}>{q}</button>
@@ -2512,7 +2597,7 @@ const handleOrder = useCallback(async (order) => {
               {aiMessages.map((m, i) => (
                 <div key={i} className={m.role === "user" ? "ai-msg-user" : "ai-msg-bot"}>
                   {m.role === "assistant" && <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}><div style={{ width: 16, height: 16, borderRadius: 4, background: "linear-gradient(135deg,#1a3aff,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff" }}>✦</div><span style={{ fontSize: 9, color: "#60a5fa", fontWeight: 700 }}>TradEx AI</span></div>}
-                  {m.role === "user" && <div style={{ fontSize: 9, color: "#374151", marginBottom: 3, textAlign: "right" }}>You</div>}
+                  {m.role === "user" && <div style={{ fontSize: 9, color: pal.textDim, marginBottom: 3, textAlign: "right" }}>You</div>}
                   <Markdown text={m.text} />
                 </div>
               ))}
@@ -2524,11 +2609,11 @@ const handleOrder = useCallback(async (order) => {
               <div style={{ position: "relative" }}>
                 <textarea value={aiInput} onChange={e => setAiInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAI(); } }}
                   placeholder={`Ask about ${activeSym.sym}…`} rows={2}
-                  style={{ width: "100%", background: "#0d1526", border: "1px solid rgba(41,98,255,0.2)", borderRadius: 8, padding: "8px 38px 8px 12px", fontSize: 11.5, color: "#e2e8f0", resize: "none", outline: "none", fontFamily: "Inter,sans-serif" }} />
+                  style={{ width: "100%", background: pal.inputBg, border: "1px solid rgba(41,98,255,0.2)", borderRadius: 8, padding: "8px 38px 8px 12px", fontSize: 11.5, color: pal.textPrimary, resize: "none", outline: "none", fontFamily: "Inter,sans-serif" }} />
                 <button id="ai-send" onClick={sendAI} disabled={aiLoading || !aiInput.trim()}
-                  style={{ position: "absolute", right: 8, bottom: 8, width: 26, height: 26, borderRadius: 6, background: aiInput.trim() && !aiLoading ? "linear-gradient(135deg,#1a3aff,#7c3aed)" : "#1e293b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#fff", border: "none", cursor: "pointer", transition: "all 0.15s" }}>↑</button>
+                  style={{ position: "absolute", right: 8, bottom: 8, width: 26, height: 26, borderRadius: 6, background: aiInput.trim() && !aiLoading ? "linear-gradient(135deg,#1a3aff,#7c3aed)" : pal.chipBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: aiInput.trim() && !aiLoading ? "#fff" : pal.textDim, border: "none", cursor: "pointer", transition: "all 0.15s" }}>↑</button>
               </div>
-              <div style={{ fontSize: 7.5, color: "#1e293b", marginTop: 3 }}>Enter=send · Shift+Enter=newline · Ctrl+A=toggle AI · Not financial advice</div>
+              <div style={{ fontSize: 7.5, color: pal.textGhost, marginTop: 3 }}>Enter=send · Shift+Enter=newline · Ctrl+A=toggle AI · Not financial advice</div>
             </div>
           </div>
         )}
