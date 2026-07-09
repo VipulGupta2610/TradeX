@@ -25,12 +25,12 @@ export default function Login() {
     }
   };
 
-  const handleAdmin = ()=>{
+  const handleAdmin = () => {
     console.log("Double clicked")
     setadminHid(false)
   }
 
-  const handleadminlog = ()=>{
+  const handleadminlog = () => {
     console.log("Handle admin log")
     navigate("/AdminLogin")
   }
@@ -40,7 +40,10 @@ export default function Login() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
   };
 
+  const adminEmail = import.meta.env.VITE_ADMIN_MAIL;
   const handleGoogleLogin = useGoogleLogin({
+
+
     onSuccess: async (tokenResponse) => {
       try {
         // 1. Fetch the user's profile using the access token
@@ -65,10 +68,13 @@ export default function Login() {
         console.log(res);
 
         toast.success("Signup successfully");
-
+        if (res.data.info.email == adminEmail) {
+          navigate(`/admin/AdminDashboard`);
+        } else {
+          navigate(`/Dashboard/${res.data.info._id}`);
+        }
         // Uncomment these when ready:
         dispatch(loginuser(res.data.info));
-        navigate(`/Dashboard/${res.data.info._id}`);
 
       } catch (error) {
         console.error("Authentication Error:", error);
@@ -186,7 +192,7 @@ export default function Login() {
             </button>
           </motion.form>
 
-          <button onDoubleClick={handleadminlog} className={`w-full ${adminHid?"hidden":"flex"} bg-white text-black font-bold text-sm px-6 py-4 rounded-xl mt-4 hover:scale-[1.02] active:scale-[0.98] transition-transform`}>Login as Admin</button>
+          <button onDoubleClick={handleadminlog} className={`w-full ${adminHid ? "hidden" : "flex"} bg-white text-black font-bold text-sm px-6 py-4 rounded-xl mt-4 hover:scale-[1.02] active:scale-[0.98] transition-transform`}>Login as Admin</button>
 
           <motion.div variants={itemVariants} className="mt-10 text-center text-sm text-zinc-500">
             Don't have an account?<Link to="/Signup"> <button className="text-white font-medium hover:underline">SignUp</button></Link>
