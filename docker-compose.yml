@@ -13,7 +13,7 @@ services:
   backend1:
     build: ./Backend
     env_file:
-      - ./backend/.env
+      - ./Backend/.env
     environment:
       - SERVER_NAME=PEHLA_SERVER
     ports:
@@ -21,7 +21,7 @@ services:
   backend2:
     build: ./Backend
     env_file:
-      - ./backend/.env
+      - ./Backend/.env
     environment:
       - SERVER_NAME=DUSRA_SERVER
     ports:
@@ -30,7 +30,7 @@ services:
   frontend:
     build: ./Frontend
     env_file:
-      - ./frontend/.env
+      - ./Frontend/.env
     ports:
       - 5173:5173
     
