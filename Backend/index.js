@@ -9,9 +9,9 @@ import { scheduleIntradaySquareOff } from "./cron/squareOff.cron.js";
 // Load env vars FIRST before any other imports that may use them
 dotenv.config();
 
-import userRoutes from "../Backend/routes/user.route.js";
-import marketRoutes from "../Backend/routes/market.route.js";
-import adminRoutes from "../Backend/routes/admin.route.js";
+import userRoutes from "./routes/user.route.js";
+import marketRoutes from "./routes/market.route.js";
+import adminRoutes from "./routes/admin.route.js";
 import { startMarketData } from "./services/marketDataService.js";
 import Redis from "ioredis";
 
