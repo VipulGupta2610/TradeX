@@ -16,21 +16,31 @@ services:
       - ./Backend/.env
     environment:
       - SERVER_NAME=PEHLA_SERVER
+      - mongodb_uri=mongodb://mongo:27017/tradex
     ports:
-      - 8001:8000
+      - 8001:2222
+    depends_on:
+      - redis
+      - mongo
   backend2:
     build: ./Backend
     env_file:
       - ./Backend/.env
     environment:
       - SERVER_NAME=DUSRA_SERVER
+      - mongodb_uri=mongodb://mongo:27017/tradex
     ports:
-      - 8002:8000
+      - 8002:2222
+    depends_on:
+      - redis
+      - mongo
     
   frontend:
     build: ./Frontend
     env_file:
       - ./Frontend/.env
+    environment:
+      - VITE_API_URL=http://localhost:8000
     ports:
       - 5173:5173
     
@@ -38,3 +48,13 @@ services:
     image: redis
     ports:
       - 6379:6379
+
+  mongo:
+    image: mongo
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

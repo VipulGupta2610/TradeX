@@ -1,6 +1,6 @@
-import axios, {create} from "axios"
+import axios from "axios"
 
 export const userapi = axios.create({
-    baseURL:"http://localhost:2222/",
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:2222/",
     withCredentials:true
 })

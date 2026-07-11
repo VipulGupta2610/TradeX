@@ -78,8 +78,8 @@ if (MONGO_URL) {
 // ── Server ────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || process.env.port || 2222;
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server listening on http://localhost:${PORT}`);
+server.listen(PORT, "0.0.0.0",() => {
+  console.log(`🚀 Server listening on http://localhost:${PORT} port and on server ${process.env.SERVER_NAME}`);
   console.log(`   Socket.IO ready`);
 });
 

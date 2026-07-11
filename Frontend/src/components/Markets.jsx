@@ -4,7 +4,8 @@ import { io } from "socket.io-client";
 import ThemeToggle from "./ThemeToggle";
 
 // ─── Socket (singleton outside component to avoid re-connects) ───────────────
-const socket = io("http://localhost:2222", {
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:2222";
+const socket = io(API_BASE, {
   transports: ["websocket"],
   reconnectionDelay: 2000,
   reconnectionAttempts: 10,
